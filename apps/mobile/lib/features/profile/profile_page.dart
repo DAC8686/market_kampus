@@ -635,7 +635,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '$campus • $phone',
+                                '${_userProfile?['nim'] != null && _userProfile!['nim'].toString().isNotEmpty ? 'NIM ${_userProfile!['nim']} • ' : ''}$campus${phone != '-' && phone.isNotEmpty ? ' • $phone' : ''}',
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.roboto(
                                   fontSize: 13,
@@ -664,11 +664,15 @@ class _ProfilePageState extends State<ProfilePage> {
 
             // Tab Content
             Expanded(
-              child: Container(
-                color: MpusTheme.backgroundColor,
-                child: _selectedTab == 0
-                    ? _buildBarangSayaGrid()
-                    : _buildPesananSayaList(),
+              child: RefreshIndicator(
+                onRefresh: _loadProfile,
+                color: MpusTheme.tealDark,
+                child: Container(
+                  color: MpusTheme.backgroundColor,
+                  child: _selectedTab == 0
+                      ? _buildBarangSayaGrid()
+                      : _buildPesananSayaList(),
+                ),
               ),
             ),
           ],

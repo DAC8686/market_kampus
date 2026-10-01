@@ -65,33 +65,30 @@ class ProfileService {
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     };
 
-    if (name != null) data['name'] = name.trim();
-    if (email != null) data['email'] = email.trim();
-    if (phone != null) data['phone'] = phone.trim();
-    if (nim != null) data['nim'] = nim.trim();
-    if (campusName != null) data['campus_name'] = campusName.trim();
+    if (name != null && name.trim().isNotEmpty) data['name'] = name.trim();
+    if (email != null && email.trim().isNotEmpty) data['email'] = email.trim().toLowerCase();
+    if (phone != null && phone.trim().isNotEmpty) data['phone'] = phone.trim();
+    if (nim != null && nim.trim().isNotEmpty) data['nim'] = nim.trim();
+    if (campusName != null && campusName.trim().isNotEmpty) data['campus_name'] = campusName.trim();
     if (isKtmVerified != null) data['is_ktm_verified'] = isKtmVerified;
     if (verificationStatus != null) data['verification_status'] = verificationStatus.trim();
-    if (ktmImageUrl != null) data['ktm_image_url'] = ktmImageUrl.trim();
+    if (ktmImageUrl != null && ktmImageUrl.trim().isNotEmpty) data['ktm_image_url'] = ktmImageUrl.trim();
     if (ewalletName != null) data['ewallet_name'] = ewalletName.trim();
     if (ewalletNumber != null) data['ewallet_number'] = ewalletNumber.trim();
 
     try {
       await _client.from('profiles').upsert(data);
-    } catch (_) {
+      debugPrint("ProfileService: Upserted profile successfully for $userId");
+    } catch (e) {
+      debugPrint("ProfileService upsert error: $e. Trying update by id...");
       try {
         await _client.from('profiles').update(data).eq('id', userId);
-      } catch (_) {
-        // Fallback resilient update
-        data.remove('is_ktm_verified');
-        try {
-          await _client.from('profiles').upsert(data);
-        } catch (_) {
+      } catch (err2) {
+        debugPrint("ProfileService update by id error: $err2");
+        if (email != null && email.isNotEmpty) {
           try {
-            await _client.from('profiles').update(data).eq('id', userId);
-          } catch (finalErr) {
-            debugPrint("ProfileService update error: $finalErr");
-          }
+            await _client.from('profiles').update(data).eq('email', email.trim().toLowerCase());
+          } catch (_) {}
         }
       }
     }

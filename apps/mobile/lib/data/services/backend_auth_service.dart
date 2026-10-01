@@ -38,11 +38,9 @@ class BackendAuthResult {
 }
 
 class BackendAuthService {
-  // Urutan prioritas: Localhost via USB ADB Reverse -> Local LAN -> Cloud Vercel
+  // 1. USB ADB Reverse (Fast local dev) -> 2. Cloud Production Vercel
   static const List<String> candidateUrls = [
     'http://127.0.0.1:8000',
-    'http://10.11.111.225:8000',
-    'http://100.64.159.25:8000',
     'https://mpus.daczdev.id',
   ];
 
@@ -80,7 +78,7 @@ class BackendAuthService {
           contentType: MediaType('image', isPng ? 'png' : 'jpeg'),
         ));
 
-        final streamed = await _client.send(request).timeout(const Duration(seconds: 25));
+        final streamed = await _client.send(request).timeout(const Duration(seconds: 20));
         final response = await http.Response.fromStream(streamed);
 
         if (response.statusCode == 200) {
@@ -116,8 +114,8 @@ class BackendAuthService {
         final response = await _client.post(
           uri,
           headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'email': email.trim(), 'otp': otp.trim()}),
-        ).timeout(const Duration(seconds: 15));
+          body: jsonEncode({'email': email.trim().toLowerCase(), 'otp': otp.trim().replaceAll(' ', '')}),
+        ).timeout(const Duration(seconds: 6));
 
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
@@ -151,8 +149,8 @@ class BackendAuthService {
         final response = await _client.post(
           uri,
           headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'email': email.trim()}),
-        ).timeout(const Duration(seconds: 15));
+          body: jsonEncode({'email': email.trim().toLowerCase()}),
+        ).timeout(const Duration(seconds: 8));
 
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);

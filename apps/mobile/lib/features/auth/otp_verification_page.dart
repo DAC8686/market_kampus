@@ -160,7 +160,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
         } catch (_) {}
       }
 
-      final currentUid = _authService.currentUserId;
+      final currentUid = _authService.currentUserId ?? SupabaseConfig.currentUserId;
       if (currentUid != null) {
         // 3. Simpan Profil Mahasiswa Terverifikasi
         await _profileService.updateProfile(
@@ -221,10 +221,12 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
           campusName: widget.campusName,
         );
       } catch (_) {
-        await _authService.signIn(email: widget.email, password: widget.password);
+        try {
+          await _authService.signIn(email: widget.email, password: widget.password);
+        } catch (_) {}
       }
 
-      final currentUid = _authService.currentUserId;
+      final currentUid = _authService.currentUserId ?? SupabaseConfig.currentUserId;
       if (currentUid != null) {
         await _profileService.updateProfile(
           userId: currentUid,
@@ -249,7 +251,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
         );
         return;
       }
-      throw Exception("Silakan masukkan kode OTP yang dikirimkan ke email.");
+      throw Exception("Silakan lakukan pendaftaran atau login terlebih dahulu.");
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

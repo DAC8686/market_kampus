@@ -148,13 +148,15 @@ async def verify_otp(payload: VerifyOtpRequest):
     Validates the 6-digit OTP code against the backend storage.
     """
     clean_email = payload.email.strip().lower()
-    clean_otp = payload.otp.strip()
+    clean_otp = re.sub(r'\s+', '', payload.otp.strip())
 
     record = otp_storage.get(clean_email)
+    print(f"\n[VERIFY OTP ATTEMPT] Email: '{clean_email}', Input OTP: '{clean_otp}', Stored: {record}")
+
     if not record:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Kode OTP tidak ditemukan atau sudah kadaluarsa. Silakan lakukan pendaftaran ulang."
+            detail="Kode OTP tidak ditemukan atau sudah kadaluarsa. Silakan klik 'Kirim Ulang'."
         )
 
     if time.time() > record["expires_at"]:
@@ -164,11 +166,14 @@ async def verify_otp(payload: VerifyOtpRequest):
             detail="Kode OTP telah kadaluarsa. Silakan klik 'Kirim Ulang'."
         )
 
-    if record["otp"] != clean_otp:
+    if str(record["otp"]).strip() != clean_otp:
+        print(f"❌ [OTP MISMATCH] Input: '{clean_otp}' != Stored: '{record['otp']}'")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Kode OTP salah. Periksa kembali email Anda."
+            detail=f"Kode OTP salah. Pastikan Anda memasukkan 6 digit kode terbaru yang dikirim ke email."
         )
+
+    print(f"✅ [OTP MATCH SUCCESS] Email {clean_email} verified successfully!")
 
     # Verification success
     user_data = record.get("user_data", {})
