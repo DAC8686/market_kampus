@@ -110,6 +110,12 @@ async def register_with_ktm(
         }
 
         # 3. Send HTML Email
+        print(f"\n=======================================================")
+        print(f"🔑 [MPUS REGISTRATION OTP] Email: {clean_email}")
+        print(f"🔢 [OTP CODE]: {otp_pin} (Berlaku 10 Menit)")
+        print(f"👤 Nama: {clean_name} | Kampus: {det_univ} | NIM: {det_nim}")
+        print(f"=======================================================\n")
+
         await send_mpus_otp_email(
             to_email=clean_email,
             name=clean_name,
@@ -199,6 +205,11 @@ async def resend_otp(payload: ResendOtpRequest):
         "expires_at": expires_at,
         "user_data": user_data
     }
+
+    print(f"\n=======================================================")
+    print(f"🔄 [MPUS RESEND OTP] Email: {clean_email}")
+    print(f"🔢 [NEW OTP CODE]: {otp_pin} (Berlaku 10 Menit)")
+    print(f"=======================================================\n")
 
     await send_mpus_otp_email(
         to_email=clean_email,
