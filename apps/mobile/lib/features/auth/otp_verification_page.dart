@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,6 +20,7 @@ class OtpVerificationPage extends StatefulWidget {
   final String phone;
   final String nim;
   final String campusName;
+  final File? ktmFile;
 
   const OtpVerificationPage({
     super.key,
@@ -28,6 +30,7 @@ class OtpVerificationPage extends StatefulWidget {
     required this.phone,
     required this.nim,
     required this.campusName,
+    this.ktmFile,
   });
 
   @override
@@ -168,6 +171,21 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
 
       currentUid ??= _authService.currentUserId ?? SupabaseConfig.currentUserId;
       if (currentUid != null) {
+        String? ktmUrl;
+        if (widget.ktmFile != null) {
+          try {
+            ktmUrl = await _profileService.submitKtmVerification(
+              userId: currentUid,
+              ktmFile: widget.ktmFile!,
+              studentNim: widget.nim,
+              campusName: widget.campusName,
+              isAutoVerified: true,
+            );
+          } catch (uploadErr) {
+            debugPrint("KTM Upload to Supabase Storage notice: $uploadErr");
+          }
+        }
+
         // 3. Simpan Profil Mahasiswa Terverifikasi
         await _profileService.updateProfile(
           userId: currentUid,
@@ -176,6 +194,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
           phone: widget.phone,
           nim: widget.nim,
           campusName: widget.campusName,
+          ktmImageUrl: ktmUrl,
           isKtmVerified: true,
           verificationStatus: 'VERIFIED',
         );
@@ -214,67 +233,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
     }
   }
 
-  Future<void> _directLoginWithAiVerifiedKtm() async {
-    setState(() => _isVerifying = true);
-    try {
-      String? currentUid = _authService.currentUserId ?? SupabaseConfig.currentUserId;
-      if (currentUid == null) {
-        try {
-          final res = await _authService.signUp(
-            email: widget.email,
-            password: widget.password,
-            name: widget.name,
-            phone: widget.phone,
-            nim: widget.nim,
-            campusName: widget.campusName,
-          );
-          currentUid = res.user?.id ?? _authService.currentUserId;
-        } catch (_) {
-          try {
-            final res = await _authService.signIn(email: widget.email, password: widget.password);
-            currentUid = res.user?.id ?? _authService.currentUserId;
-          } catch (_) {}
-        }
-      }
 
-      currentUid ??= _authService.currentUserId ?? SupabaseConfig.currentUserId;
-      if (currentUid != null) {
-        await _profileService.updateProfile(
-          userId: currentUid,
-          name: widget.name,
-          email: widget.email,
-          phone: widget.phone,
-          nim: widget.nim,
-          campusName: widget.campusName,
-          isKtmVerified: true,
-          verificationStatus: 'VERIFIED',
-        );
-
-        try {
-          await FirebaseNotificationService().syncTokenToProfile();
-        } catch (_) {}
-
-        if (!mounted) return;
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const HomePage()),
-          (route) => false,
-        );
-        return;
-      }
-      throw Exception("Silakan lakukan pendaftaran atau login terlebih dahulu.");
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Masuk Langsung: ${e.toString().replaceAll('AuthException: ', '').replaceAll('Exception: ', '')}"),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _isVerifying = false);
-    }
-  }
 
   Future<void> _resendOtp() async {
     if (_resendCountdown > 0 || _isResending) return;
@@ -544,21 +503,6 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
                                   ),
                                 ),
                               ],
-                            ),
-
-                            const SizedBox(height: 16),
-                            // Direct Bypass AI Verification Option
-                            TextButton.icon(
-                              onPressed: _isVerifying ? null : _directLoginWithAiVerifiedKtm,
-                              icon: const Icon(Icons.verified_user_rounded, size: 16, color: MpusTheme.accentBlue),
-                              label: const Text(
-                                "KTM Sudah Lolos AI? Masuk Langsung",
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: MpusTheme.accentBlue,
-                                ),
-                              ),
                             ),
                           ],
                         ),

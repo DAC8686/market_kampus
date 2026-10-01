@@ -295,10 +295,18 @@ class _ProfilePageState extends State<ProfilePage> {
       return;
     }
 
-    final nameCtrl = TextEditingController(text: _userProfile?['name']?.toString() ?? 'DIMAS ADHI CAHYONO');
-    final nimCtrl = TextEditingController(text: _userProfile?['nim']?.toString() ?? '241101066');
-    final campusCtrl = TextEditingController(text: _userProfile?['campus_name']?.toString() ?? 'Universitas Nahdlatul Ulama Sunan Giri');
-    final phoneCtrl = TextEditingController(text: _userProfile?['phone']?.toString() ?? '');
+    final initialName = _userProfile?['name']?.toString() ??
+        SupabaseConfig.currentUser?.userMetadata?['name']?.toString() ??
+        SupabaseConfig.currentUser?.userMetadata?['full_name']?.toString() ??
+        '';
+    final initialNim = _userProfile?['nim']?.toString() ?? '';
+    final initialCampus = _userProfile?['campus_name']?.toString() ?? '';
+    final initialPhone = _userProfile?['phone']?.toString() ?? '';
+
+    final nameCtrl = TextEditingController(text: initialName);
+    final nimCtrl = TextEditingController(text: initialNim);
+    final campusCtrl = TextEditingController(text: initialCampus);
+    final phoneCtrl = TextEditingController(text: initialPhone);
 
     showDialog(
       context: context,

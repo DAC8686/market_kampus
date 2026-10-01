@@ -21,7 +21,7 @@ class AuthService {
 
   Stream<AuthState> get authStateChanges => _client.auth.onAuthStateChange;
 
-  // Sign Up with Email & Password + Firebase Email Verification
+  // Sign Up with Email & Password
   Future<AuthResponse> signUp({
     required String email,
     required String password,
@@ -30,28 +30,6 @@ class AuthService {
     String? nim,
     String? campusName,
   }) async {
-    // 1. Kirim Email Verifikasi via Firebase Auth (Google Infrastructure)
-    try {
-      final auth = _fbAuth;
-      if (auth != null) {
-        final fbCred = await auth.createUserWithEmailAndPassword(
-          email: email.trim(),
-          password: password,
-        );
-        await fbCred.user?.sendEmailVerification();
-        debugPrint("Firebase Auth verification email sent to ${email.trim()}");
-      }
-    } catch (fbErr) {
-      debugPrint("Firebase Auth create user / email send error: $fbErr");
-      try {
-        final auth = _fbAuth;
-        if (auth?.currentUser != null) {
-          await auth!.currentUser?.sendEmailVerification();
-        }
-      } catch (_) {}
-    }
-
-    // 2. Registrasi & Simpan ke Supabase DB
     final response = await _client.auth.signUp(
       email: email.trim(),
       password: password,

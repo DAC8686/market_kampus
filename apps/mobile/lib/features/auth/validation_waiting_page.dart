@@ -94,6 +94,7 @@ class _ValidationWaitingPageState extends State<ValidationWaitingPage> {
             phone: widget.phone,
             nim: widget.nim,
             campusName: result.campusName ?? "Kampus",
+            ktmFile: widget.ktmFile,
           ),
         ),
       );
