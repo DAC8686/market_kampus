@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'core/config/supabase_config.dart';
 import 'core/theme/mpus_theme.dart';
 import 'data/services/firebase_notification_service.dart';
 import 'features/splash/splash_page.dart';
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,8 +15,12 @@ void main() async {
 
   // 2. Inisialisasi Firebase & FCM Notifikasi (Graceful fallback)
   try {
-    await Firebase.initializeApp();
-    await FirebaseNotificationService.initialize();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    if (!kIsWeb) {
+      await FirebaseNotificationService.initialize();
+    }
   } catch (e) {
     debugPrint("Firebase init note: $e");
   }

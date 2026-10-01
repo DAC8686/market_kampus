@@ -6,7 +6,14 @@ import '../../core/config/supabase_config.dart';
 
 class AuthService {
   final SupabaseClient _client = SupabaseConfig.client;
-  final fb_auth.FirebaseAuth _fbAuth = fb_auth.FirebaseAuth.instance;
+  
+  fb_auth.FirebaseAuth? get _fbAuth {
+    try {
+      return fb_auth.FirebaseAuth.instance;
+    } catch (_) {
+      return null;
+    }
+  }
 
   User? get currentUser => _client.auth.currentUser;
   bool get isAuthenticated => currentUser != null;
@@ -25,17 +32,21 @@ class AuthService {
   }) async {
     // 1. Kirim Email Verifikasi via Firebase Auth (Google Infrastructure)
     try {
-      final fbCred = await _fbAuth.createUserWithEmailAndPassword(
-        email: email.trim(),
-        password: password,
-      );
-      await fbCred.user?.sendEmailVerification();
-      debugPrint("Firebase Auth verification email sent to ${email.trim()}");
+      final auth = _fbAuth;
+      if (auth != null) {
+        final fbCred = await auth.createUserWithEmailAndPassword(
+          email: email.trim(),
+          password: password,
+        );
+        await fbCred.user?.sendEmailVerification();
+        debugPrint("Firebase Auth verification email sent to ${email.trim()}");
+      }
     } catch (fbErr) {
       debugPrint("Firebase Auth create user / email send error: $fbErr");
       try {
-        if (_fbAuth.currentUser != null) {
-          await _fbAuth.currentUser?.sendEmailVerification();
+        final auth = _fbAuth;
+        if (auth?.currentUser != null) {
+          await auth!.currentUser?.sendEmailVerification();
         }
       } catch (_) {}
     }
@@ -88,8 +99,9 @@ class AuthService {
     OtpType type = OtpType.signup,
   }) async {
     try {
-      if (_fbAuth.currentUser != null) {
-        await _fbAuth.currentUser?.sendEmailVerification();
+      final auth = _fbAuth;
+      if (auth?.currentUser != null) {
+        await auth!.currentUser?.sendEmailVerification();
       }
     } catch (e) {
       debugPrint("Firebase resend error: $e");

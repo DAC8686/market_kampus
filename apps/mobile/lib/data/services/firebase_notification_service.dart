@@ -17,12 +17,21 @@ class FirebaseNotificationService {
   factory FirebaseNotificationService() => _instance;
   FirebaseNotificationService._internal();
 
-  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+  FirebaseMessaging? get _firebaseMessaging {
+    try {
+      return FirebaseMessaging.instance;
+    } catch (_) {
+      return null;
+    }
+  }
+
   final ProfileService _profileService = ProfileService();
 
   static Future<void> initialize() async {
     try {
-      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+      if (!kIsWeb) {
+        FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+      }
 
       final instance = FirebaseNotificationService();
       await instance._requestPermission();
@@ -34,7 +43,9 @@ class FirebaseNotificationService {
   }
 
   Future<void> _requestPermission() async {
-    NotificationSettings settings = await _firebaseMessaging.requestPermission(
+    final fm = _firebaseMessaging;
+    if (fm == null) return;
+    NotificationSettings settings = await fm.requestPermission(
       alert: true,
       badge: true,
       sound: true,
@@ -46,14 +57,16 @@ class FirebaseNotificationService {
 
   Future<void> _setupToken() async {
     try {
-      String? token = await _firebaseMessaging.getToken();
+      final fm = _firebaseMessaging;
+      if (fm == null) return;
+      String? token = await fm.getToken();
       if (token != null) {
         debugPrint("FCM Device Token: $token");
         await syncTokenToProfile(token);
       }
 
       // Listen for token refresh
-      _firebaseMessaging.onTokenRefresh.listen((newToken) async {
+      fm.onTokenRefresh.listen((newToken) async {
         debugPrint("FCM Token refreshed: $newToken");
         await syncTokenToProfile(newToken);
       });
@@ -67,7 +80,8 @@ class FirebaseNotificationService {
     if (uid == null) return;
 
     try {
-      final token = explicitToken ?? await _firebaseMessaging.getToken();
+      final fm = _firebaseMessaging;
+      final token = explicitToken ?? (fm != null ? await fm.getToken() : null);
       if (token != null && token.isNotEmpty) {
         await _profileService.updateFcmToken(uid, token);
       }
@@ -92,16 +106,18 @@ class FirebaseNotificationService {
 
   void _setupMessageListeners() {
     // Foreground message handler
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      debugPrint('Received foreground notification: ${message.notification?.title} - ${message.notification?.body}');
-      final title = message.notification?.title ?? "Notifikasi Mpus";
-      final body = message.notification?.body ?? "";
-      emitInAppNotification(title: title, body: body, payload: message.data['otp']?.toString());
-    });
+    try {
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        debugPrint('Received foreground notification: ${message.notification?.title} - ${message.notification?.body}');
+        final title = message.notification?.title ?? "Notifikasi Mpus";
+        final body = message.notification?.body ?? "";
+        emitInAppNotification(title: title, body: body, payload: message.data['otp']?.toString());
+      });
 
-    // When app is opened from a notification
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      debugPrint('Notification clicked with payload: ${message.data}');
-    });
+      // When app is opened from a notification
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        debugPrint('Notification clicked with payload: ${message.data}');
+      });
+    } catch (_) {}
   }
 }
