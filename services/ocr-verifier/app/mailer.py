@@ -13,7 +13,7 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASS = os.getenv("SMTP_PASS", "")
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
-FROM_EMAIL = os.getenv("FROM_EMAIL", "Mpus Kampus <no-reply@mpus.daczdev.id>")
+FROM_EMAIL = os.getenv("FROM_EMAIL", "Mpus Kampus <onboarding@resend.dev>")
 
 def generate_mpus_otp_html(name: str, otp_code: str, campus_name: str = "Kampus") -> str:
     return f"""
