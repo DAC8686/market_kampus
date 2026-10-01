@@ -102,17 +102,16 @@ class _LoginPageState extends State<LoginPage> {
         final isRegistered = phone.isNotEmpty || nim.isNotEmpty || ktmUrl.isNotEmpty;
 
         if (!isRegistered) {
-          // Akun belum terdaftar -> Batalkan sesi login sementara & arahkan langsung ke registrasi
+          // Akun Google baru/belum lengkap -> Pertahankan sesi & arahkan ke registrasi mahasiswa
           final googleEmail = user.email;
           final googleName = user.userMetadata?['name']?.toString() ??
               user.userMetadata?['full_name']?.toString();
 
-          await _authService.signOut();
           if (!mounted) return;
 
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text("Akun Google belum terdaftar di MPUS. Silakan lengkapi pendaftaran mahasiswa."),
+              content: Text("Akun Google terhubung. Silakan lengkapi identitas mahasiswa dan KTM."),
             ),
           );
 

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/config/supabase_config.dart';
 import '../../core/theme/mpus_theme.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/services/profile_service.dart';
@@ -145,22 +146,27 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
       }
 
       // 2. Registrasi / Sesi Login Supabase
-      try {
-        await _authService.signUp(
-          email: widget.email,
-          password: widget.password,
-          name: widget.name,
-          phone: widget.phone,
-          nim: widget.nim,
-          campusName: widget.campusName,
-        );
-      } catch (_) {
+      String? currentUid = _authService.currentUserId ?? SupabaseConfig.currentUserId;
+      if (currentUid == null) {
         try {
-          await _authService.signIn(email: widget.email, password: widget.password);
-        } catch (_) {}
+          final res = await _authService.signUp(
+            email: widget.email,
+            password: widget.password,
+            name: widget.name,
+            phone: widget.phone,
+            nim: widget.nim,
+            campusName: widget.campusName,
+          );
+          currentUid = res.user?.id ?? _authService.currentUserId;
+        } catch (_) {
+          try {
+            final res = await _authService.signIn(email: widget.email, password: widget.password);
+            currentUid = res.user?.id ?? _authService.currentUserId;
+          } catch (_) {}
+        }
       }
 
-      final currentUid = _authService.currentUserId ?? SupabaseConfig.currentUserId;
+      currentUid ??= _authService.currentUserId ?? SupabaseConfig.currentUserId;
       if (currentUid != null) {
         // 3. Simpan Profil Mahasiswa Terverifikasi
         await _profileService.updateProfile(
@@ -211,22 +217,27 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
   Future<void> _directLoginWithAiVerifiedKtm() async {
     setState(() => _isVerifying = true);
     try {
-      try {
-        await _authService.signUp(
-          email: widget.email,
-          password: widget.password,
-          name: widget.name,
-          phone: widget.phone,
-          nim: widget.nim,
-          campusName: widget.campusName,
-        );
-      } catch (_) {
+      String? currentUid = _authService.currentUserId ?? SupabaseConfig.currentUserId;
+      if (currentUid == null) {
         try {
-          await _authService.signIn(email: widget.email, password: widget.password);
-        } catch (_) {}
+          final res = await _authService.signUp(
+            email: widget.email,
+            password: widget.password,
+            name: widget.name,
+            phone: widget.phone,
+            nim: widget.nim,
+            campusName: widget.campusName,
+          );
+          currentUid = res.user?.id ?? _authService.currentUserId;
+        } catch (_) {
+          try {
+            final res = await _authService.signIn(email: widget.email, password: widget.password);
+            currentUid = res.user?.id ?? _authService.currentUserId;
+          } catch (_) {}
+        }
       }
 
-      final currentUid = _authService.currentUserId ?? SupabaseConfig.currentUserId;
+      currentUid ??= _authService.currentUserId ?? SupabaseConfig.currentUserId;
       if (currentUid != null) {
         await _profileService.updateProfile(
           userId: currentUid,

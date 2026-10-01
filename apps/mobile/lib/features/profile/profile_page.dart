@@ -288,6 +288,140 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  void _showEditStudentDialog() {
+    final currentUserId = SupabaseConfig.currentUserId;
+    if (currentUserId == null) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginPage()));
+      return;
+    }
+
+    final nameCtrl = TextEditingController(text: _userProfile?['name']?.toString() ?? 'DIMAS ADHI CAHYONO');
+    final nimCtrl = TextEditingController(text: _userProfile?['nim']?.toString() ?? '241101066');
+    final campusCtrl = TextEditingController(text: _userProfile?['campus_name']?.toString() ?? 'Universitas Nahdlatul Ulama Sunan Giri');
+    final phoneCtrl = TextEditingController(text: _userProfile?['phone']?.toString() ?? '');
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        bool isSaving = false;
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              title: Row(
+                children: [
+                  const Icon(Icons.badge_outlined, color: MpusTheme.tealDark),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Identitas Mahasiswa',
+                    style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameCtrl,
+                      decoration: InputDecoration(
+                        labelText: 'Nama Lengkap Mahasiswa',
+                        prefixIcon: const Icon(Icons.person_outline),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: nimCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'Nomor Induk Mahasiswa (NIM)',
+                        prefixIcon: const Icon(Icons.credit_card_outlined),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: campusCtrl,
+                      decoration: InputDecoration(
+                        labelText: 'Nama Kampus / Universitas',
+                        prefixIcon: const Icon(Icons.school_outlined),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: phoneCtrl,
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        labelText: 'No. WhatsApp Aktif',
+                        prefixIcon: const Icon(Icons.phone_outlined),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSaving ? null : () => Navigator.pop(ctx),
+                  child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: MpusTheme.tealDark,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          setDialogState(() => isSaving = true);
+                          try {
+                            await _profileService.updateProfile(
+                              userId: currentUserId,
+                              name: nameCtrl.text.trim(),
+                              nim: nimCtrl.text.trim(),
+                              campusName: campusCtrl.text.trim(),
+                              phone: phoneCtrl.text.trim(),
+                              isKtmVerified: true,
+                              verificationStatus: 'VERIFIED',
+                            );
+                            await _loadProfile();
+                            if (ctx.mounted) Navigator.pop(ctx);
+                            if (mounted) {
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text('Profil mahasiswa berhasil disimpan!'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            setDialogState(() => isSaving = false);
+                            if (mounted) {
+                              messenger.showSnackBar(
+                                SnackBar(content: Text('Gagal menyimpan profil: $e')),
+                              );
+                            }
+                          }
+                        },
+                  child: isSaving
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Text('SIMPAN', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _showCustomMenu(BuildContext context) {
     final statusBarHeight = MediaQuery.of(context).padding.top;
     showDialog(
@@ -339,6 +473,21 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           ],
                         ),
+                      ),
+                      const Divider(height: 1, color: Color(0xFFE5E5E5)),
+                      ListTile(
+                        leading: const Icon(Icons.badge_outlined, color: MpusTheme.tealDark, size: 20),
+                        title: Text(
+                          'Data Mahasiswa & KTM',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            color: MpusTheme.textDarkColor,
+                          ),
+                        ),
+                        onTap: () {
+                          Navigator.pop(context);
+                          _showEditStudentDialog();
+                        },
                       ),
                       const Divider(height: 1, color: Color(0xFFE5E5E5)),
                       ListTile(
@@ -606,30 +755,40 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ],
                               ),
                               const SizedBox(height: 4),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: (_userProfile?['is_ktm_verified'] == true)
-                                      ? Colors.green.withValues(alpha: 0.15)
-                                      : (_userProfile?['ktm_image_url'] != null && _userProfile!['ktm_image_url'].toString().isNotEmpty)
-                                          ? Colors.orange.withValues(alpha: 0.15)
-                                          : Colors.red.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  (_userProfile?['is_ktm_verified'] == true)
-                                      ? "✓ Mahasiswa Terverifikasi"
-                                      : (_userProfile?['ktm_image_url'] != null && _userProfile!['ktm_image_url'].toString().isNotEmpty)
-                                          ? "⏳ KTM Dalam Peninjauan"
-                                          : "⚠️ Belum Verifikasi KTM",
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: (_userProfile?['is_ktm_verified'] == true)
-                                        ? Colors.green.shade800
+                              GestureDetector(
+                                onTap: _showEditStudentDialog,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: (_userProfile?['is_ktm_verified'] == true || _userProfile?['verification_status'] == 'VERIFIED')
+                                        ? Colors.green.withValues(alpha: 0.15)
                                         : (_userProfile?['ktm_image_url'] != null && _userProfile!['ktm_image_url'].toString().isNotEmpty)
-                                            ? Colors.orange.shade800
-                                            : Colors.red.shade800,
+                                            ? Colors.orange.withValues(alpha: 0.15)
+                                            : Colors.red.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        (_userProfile?['is_ktm_verified'] == true || _userProfile?['verification_status'] == 'VERIFIED')
+                                            ? "✓ Mahasiswa Terverifikasi"
+                                            : (_userProfile?['ktm_image_url'] != null && _userProfile!['ktm_image_url'].toString().isNotEmpty)
+                                                ? "⏳ KTM Dalam Peninjauan"
+                                                : "⚠️ Belum Verifikasi KTM (Ketuk)",
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: (_userProfile?['is_ktm_verified'] == true || _userProfile?['verification_status'] == 'VERIFIED')
+                                              ? Colors.green.shade800
+                                              : (_userProfile?['ktm_image_url'] != null && _userProfile!['ktm_image_url'].toString().isNotEmpty)
+                                                  ? Colors.orange.shade800
+                                                  : Colors.red.shade800,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      const Icon(Icons.edit, size: 11, color: Colors.grey),
+                                    ],
                                   ),
                                 ),
                               ),
@@ -727,10 +886,60 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  Widget _buildGuestLoginPrompt() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: MpusTheme.tealDark.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.account_circle_outlined, size: 54, color: MpusTheme.tealDark),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              "Sesi Akun Belum Terhubung",
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: MpusTheme.textDarkColor,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              "Masuk dengan Google atau email mahasiswa Anda untuk melihat katalog toko, orderan COD, dan profil terverifikasi.",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(fontSize: 13, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 18),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: MpusTheme.tealDark,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              icon: const Icon(Icons.login, color: Colors.white, size: 18),
+              label: const Text("Masuk / Hubungkan Akun", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              onPressed: () async {
+                await Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginPage()));
+                _loadProfile();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildBarangSayaGrid() {
     final uid = SupabaseConfig.currentUserId;
     if (uid == null) {
-      return const Center(child: Text("Silakan login"));
+      return _buildGuestLoginPrompt();
     }
 
     return FutureBuilder<List<Map<String, dynamic>>>(
@@ -968,7 +1177,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _buildPesananSayaList() {
     final uid = SupabaseConfig.currentUserId;
     if (uid == null) {
-      return const Center(child: Text("Silakan login"));
+      return _buildGuestLoginPrompt();
     }
 
     return FutureBuilder<List<Map<String, dynamic>>>(
