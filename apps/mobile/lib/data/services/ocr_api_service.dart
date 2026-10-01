@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import '../../core/constants/app_constants.dart';
 
 class KTMVerificationResult {
@@ -85,73 +86,94 @@ class OcrApiService {
       : baseUrl = baseUrl ?? AppConstants.ocrServiceBaseUrl,
         _httpClient = client ?? http.Client();
 
-  // Verify KTM by uploading an image file directly to Cloud API (Gemini 2.5 Flash Vision)
+  // Verify KTM by uploading an image file directly to Cloud / Local API (Gemini 2.5 Flash Vision)
   Future<KTMVerificationResult> verifyKtmImage({
     required File imageFile,
     String? expectedNim,
     String? expectedName,
     String? expectedCampus,
   }) async {
-    try {
-      final uri = Uri.parse('$baseUrl/api/v1/verify-upload');
-      final request = http.MultipartRequest('POST', uri);
+    final candidateUrls = [
+      'http://127.0.0.1:8000',
+      'http://10.11.111.225:8000',
+      'http://100.64.159.25:8000',
+      baseUrl,
+    ];
 
-      final bytes = await imageFile.readAsBytes();
-      final filename = imageFile.path.split('/').last;
+    for (final host in candidateUrls) {
+      try {
+        final uri = Uri.parse('$host/api/v1/verify-upload');
+        final request = http.MultipartRequest('POST', uri);
 
-      request.files.add(
-        http.MultipartFile.fromBytes('file', bytes, filename: filename),
-      );
+        final bytes = await imageFile.readAsBytes();
+        final filename = imageFile.path.split('/').last;
+        final isPng = filename.toLowerCase().endsWith('.png');
 
-      if (expectedNim != null && expectedNim.isNotEmpty) {
-        request.fields['expected_nim'] = expectedNim;
-      }
-      if (expectedName != null && expectedName.isNotEmpty) {
-        request.fields['expected_name'] = expectedName;
-      }
-      if (expectedCampus != null && expectedCampus.isNotEmpty) {
-        request.fields['expected_campus'] = expectedCampus;
-      }
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'file',
+            bytes,
+            filename: filename,
+            contentType: MediaType('image', isPng ? 'png' : 'jpeg'),
+          ),
+        );
 
-      final streamedResponse = await _httpClient.send(request).timeout(
-        const Duration(seconds: 40),
-      );
-
-      final response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> data = jsonDecode(response.body);
-        return KTMVerificationResult.fromJson(data);
-      } else {
-        try {
-          final errData = jsonDecode(response.body);
-          return KTMVerificationResult(
-            success: false,
-            status: 'REJECTED',
-            errorMessage: errData['detail']?.toString() ?? 'Verifikasi ditolak oleh server',
-          );
-        } catch (_) {
-          return KTMVerificationResult.failure('Gagal memverifikasi KTM (${response.statusCode})');
+        if (expectedNim != null && expectedNim.isNotEmpty) {
+          request.fields['expected_nim'] = expectedNim;
         }
+        if (expectedName != null && expectedName.isNotEmpty) {
+          request.fields['expected_name'] = expectedName;
+        }
+        if (expectedCampus != null && expectedCampus.isNotEmpty) {
+          request.fields['expected_campus'] = expectedCampus;
+        }
+
+        final streamedResponse = await _httpClient.send(request).timeout(
+          const Duration(seconds: 25),
+        );
+
+        final response = await http.Response.fromStream(streamedResponse);
+
+        if (response.statusCode == 200) {
+          final Map<String, dynamic> data = jsonDecode(response.body);
+          return KTMVerificationResult.fromJson(data);
+        } else {
+          try {
+            final errData = jsonDecode(response.body);
+            return KTMVerificationResult(
+              success: false,
+              status: 'REJECTED',
+              errorMessage: errData['detail']?.toString() ?? 'Verifikasi ditolak oleh server',
+            );
+          } catch (_) {}
+        }
+      } catch (e) {
+        debugPrint('OcrApiService attempt to $host failed: $e');
       }
-    } catch (e) {
-      debugPrint('OcrApiService Cloud attempt failed: $e');
-      return KTMVerificationResult(
-        success: false,
-        status: 'PENDING_REVIEW',
-        errorMessage: 'Gagal terhubung ke Cloud OCR ($e). KTM akan ditinjau secara manual.',
-      );
     }
+
+    return KTMVerificationResult(
+      success: false,
+      status: 'PENDING_REVIEW',
+      errorMessage: 'Gagal terhubung ke OCR Server. KTM akan ditinjau secara manual.',
+    );
   }
 
-  // Check health of OCR service directly on cloud
+  // Check health of OCR service
   Future<bool> checkHealth() async {
-    try {
-      final uri = Uri.parse('$baseUrl/health');
-      final response = await _httpClient.get(uri).timeout(const Duration(seconds: 5));
-      return response.statusCode == 200;
-    } catch (_) {
-      return false;
+    final candidateUrls = [
+      'http://127.0.0.1:8000',
+      'http://10.11.111.225:8000',
+      'http://100.64.159.25:8000',
+      baseUrl,
+    ];
+    for (final host in candidateUrls) {
+      try {
+        final uri = Uri.parse('$host/health');
+        final response = await _httpClient.get(uri).timeout(const Duration(seconds: 3));
+        if (response.statusCode == 200) return true;
+      } catch (_) {}
     }
+    return false;
   }
 }

@@ -50,6 +50,18 @@ class KTROcrEngine:
         if not self.gemini_api_key:
             return None
 
+        # Sanitize MIME type for Gemini Vision (Gemini rejects application/octet-stream)
+        clean_mime = (mime_type or "").lower().strip()
+        if not clean_mime or "octet-stream" in clean_mime:
+            if image_bytes.startswith(b'\x89PNG'):
+                clean_mime = "image/png"
+            elif image_bytes.startswith(b'RIFF') and b'WEBP' in image_bytes[:12]:
+                clean_mime = "image/webp"
+            elif image_bytes.startswith(b'GIF8'):
+                clean_mime = "image/gif"
+            else:
+                clean_mime = "image/jpeg"
+
         b64_image = base64.b64encode(image_bytes).decode("utf-8")
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.gemini_model}:generateContent?key={self.gemini_api_key}"
 
@@ -84,7 +96,7 @@ class KTROcrEngine:
                     {"text": prompt},
                     {
                         "inline_data": {
-                            "mime_type": mime_type,
+                            "mime_type": clean_mime,
                             "data": b64_image
                         }
                     }
