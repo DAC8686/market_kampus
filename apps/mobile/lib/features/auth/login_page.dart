@@ -205,7 +205,7 @@ class _LoginPageState extends State<LoginPage> {
                             height: 38 * scaleW,
                             child: TextField(
                               controller: _nimController,
-                              keyboardType: TextInputType.number,
+                              keyboardType: TextInputType.emailAddress,
                               style: TextStyle(
                                 color: MpusTheme.textPrimaryColor,
                                 fontSize: 14 * scaleW,
@@ -214,7 +214,7 @@ class _LoginPageState extends State<LoginPage> {
                               textAlignVertical: TextAlignVertical.center,
                               decoration: InputDecoration(
                                 isDense: true,
-                                labelText: 'NIM',
+                                labelText: 'Email / NIM',
                                 floatingLabelBehavior: FloatingLabelBehavior.auto,
                                 floatingLabelStyle: TextStyle(
                                   color: const Color(0xFF8F8F8F),

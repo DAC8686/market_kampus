@@ -21,6 +21,7 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _nimController = TextEditingController();
   final _passwordController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -39,6 +40,7 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   void dispose() {
     _usernameController.dispose();
+    _emailController.dispose();
     _nimController.dispose();
     _passwordController.dispose();
     _phoneController.dispose();
@@ -115,13 +117,21 @@ class _RegisterPageState extends State<RegisterPage> {
 
   Future<void> _signUp() async {
     final name = _usernameController.text.trim();
-    final nimOrEmail = _nimController.text.trim();
+    final emailInput = _emailController.text.trim();
+    final nim = _nimController.text.trim();
     final password = _passwordController.text.trim();
     final rawPhone = _phoneController.text.trim();
 
-    if (name.isEmpty || nimOrEmail.isEmpty || password.isEmpty) {
+    if (name.isEmpty || emailInput.isEmpty || nim.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Harap isi semua kolom wajib (Nama, NIM, Password)")),
+        const SnackBar(content: Text("Harap isi semua kolom wajib (Nama, Email, NIM, Password)")),
+      );
+      return;
+    }
+
+    if (!emailInput.contains('@') || !emailInput.contains('.')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Format email tidak valid")),
       );
       return;
     }
@@ -144,9 +154,8 @@ class _RegisterPageState extends State<RegisterPage> {
     setState(() => _isLoading = true);
 
     try {
-      final email = nimOrEmail.contains('@') ? nimOrEmail : "$nimOrEmail@mpus.com";
       final response = await _authService.signUp(
-        email: email,
+        email: emailInput,
         password: password,
         name: name,
         phone: cleanPhone,
@@ -155,7 +164,7 @@ class _RegisterPageState extends State<RegisterPage> {
       // Pastikan ada sesi aktif untuk operasi upload KTM & update profil
       if (_authService.currentUser == null) {
         try {
-          await _authService.signIn(email: email, password: password);
+          await _authService.signIn(email: emailInput, password: password);
         } catch (_) {}
       }
 
@@ -166,7 +175,7 @@ class _RegisterPageState extends State<RegisterPage> {
             await _profileService.submitKtmVerification(
               userId: currentUid,
               ktmFile: _ktmImage!,
-              studentNim: nimOrEmail,
+              studentNim: nim,
               campusName: "Kampus",
               isAutoVerified: _isAutoVerified,
             );
@@ -180,7 +189,7 @@ class _RegisterPageState extends State<RegisterPage> {
             userId: currentUid,
             name: name,
             phone: cleanPhone,
-            nim: nimOrEmail,
+            nim: nim,
             campusName: "Kampus",
           );
         } catch (profileErr) {
@@ -250,7 +259,7 @@ class _RegisterPageState extends State<RegisterPage> {
       backgroundColor: MpusTheme.primaryColor,
       body: SingleChildScrollView(
         child: SizedBox(
-          height: 960 * scaleW,
+          height: 1000 * scaleW,
           width: double.infinity,
           child: Stack(
             children: [
@@ -269,14 +278,14 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
               Positioned(
                 left: 38 * scaleW,
-                top: 140 * scaleW,
+                top: 130 * scaleW,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(30 * scaleW),
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                     child: Container(
                       width: 336 * scaleW,
-                      height: 680 * scaleW,
+                      height: 740 * scaleW,
                       padding: EdgeInsets.only(
                         top: 5 * scaleW,
                         left: 25 * scaleW,
@@ -301,7 +310,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               color: MpusTheme.textSecondaryColor,
                             ),
                           ),
-                          SizedBox(height: 25 * scaleW),
+                          SizedBox(height: 20 * scaleW),
                           // Username
                           SizedBox(
                             width: 250 * scaleW,
@@ -315,6 +324,24 @@ class _RegisterPageState extends State<RegisterPage> {
                               ),
                               textAlignVertical: TextAlignVertical.center,
                               decoration: _inputStyle('Username / Nama Toko', scaleW),
+                            ),
+                          ),
+                          SizedBox(height: 14 * scaleW),
+
+                          // Email
+                          SizedBox(
+                            width: 250 * scaleW,
+                            height: 36 * scaleW,
+                            child: TextField(
+                              controller: _emailController,
+                              keyboardType: TextInputType.emailAddress,
+                              style: TextStyle(
+                                color: MpusTheme.textPrimaryColor,
+                                fontSize: 14 * scaleW,
+                                fontFamily: "Roboto",
+                              ),
+                              textAlignVertical: TextAlignVertical.center,
+                              decoration: _inputStyle('Email', scaleW),
                             ),
                           ),
                           SizedBox(height: 14 * scaleW),
