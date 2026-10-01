@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -75,10 +76,27 @@ class FirebaseNotificationService {
     }
   }
 
+  // Stream controller for broadcasting in-app notifications
+  static final StreamController<Map<String, String>> _notificationStreamController =
+      StreamController<Map<String, String>>.broadcast();
+  static Stream<Map<String, String>> get onNotificationReceived =>
+      _notificationStreamController.stream;
+
+  static void emitInAppNotification({required String title, required String body, String? payload}) {
+    _notificationStreamController.add({
+      'title': title,
+      'body': body,
+      'payload': payload ?? '',
+    });
+  }
+
   void _setupMessageListeners() {
     // Foreground message handler
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       debugPrint('Received foreground notification: ${message.notification?.title} - ${message.notification?.body}');
+      final title = message.notification?.title ?? "Notifikasi Mpus";
+      final body = message.notification?.body ?? "";
+      emitInAppNotification(title: title, body: body, payload: message.data['otp']?.toString());
     });
 
     // When app is opened from a notification

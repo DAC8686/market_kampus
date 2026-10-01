@@ -47,17 +47,14 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
-    double scaleW = screenWidth / 412;
-
     return Scaffold(
       backgroundColor: MpusTheme.backgroundColor,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: MpusTheme.primaryColor,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20 * scaleW),
-            topRight: Radius.circular(20 * scaleW),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
           ),
           boxShadow: [
             BoxShadow(
@@ -68,9 +65,9 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20 * scaleW),
-            topRight: Radius.circular(20 * scaleW),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
           ),
           child: BottomNavigationBar(
             backgroundColor: Colors.transparent,
@@ -81,7 +78,7 @@ class _HomePageState extends State<HomePage> {
             unselectedItemColor: MpusTheme.textSecondaryColor,
             showSelectedLabels: false,
             showUnselectedLabels: false,
-            iconSize: 30 * scaleW,
+            iconSize: 28,
             items: const [
               BottomNavigationBarItem(
                 icon: Icon(Icons.home_outlined),
@@ -101,21 +98,22 @@ class _HomePageState extends State<HomePage> {
       body: SafeArea(
         child: Stack(
           children: [
-            Positioned(
-              left: 165 * scaleW,
-              top: 366 * scaleW,
-              child: SvgPicture.asset(
-                'assets/Mpus1.svg',
-                width: 83 * scaleW,
-                height: 30 * scaleW,
-                colorFilter: const ColorFilter.mode(
-                  MpusTheme.textSecondaryColor,
-                  BlendMode.srcIn,
+            Center(
+              child: Opacity(
+                opacity: 0.08,
+                child: SvgPicture.asset(
+                  'assets/Mpus1.svg',
+                  width: 140,
+                  height: 50,
+                  colorFilter: const ColorFilter.mode(
+                    MpusTheme.textSecondaryColor,
+                    BlendMode.srcIn,
+                  ),
                 ),
               ),
             ),
             _selectedIndex == 0
-                ? _buildHomeContent(scaleW)
+                ? _buildHomeContent()
                 : const ProfilePage(),
           ],
         ),
@@ -124,7 +122,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   // --- KONTEN HALAMAN HOME ---
-  Widget _buildHomeContent(double scaleW) {
+  Widget _buildHomeContent() {
     return Column(
       children: [
         // LAYER ATAS: HEADER DENGAN LOGO BACKGROUND & FILTER
@@ -139,9 +137,9 @@ class _HomePageState extends State<HomePage> {
                 Colors.white.withValues(alpha: 0.6),
               ],
             ),
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(20 * scaleW),
-              bottomRight: Radius.circular(20 * scaleW),
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
             ),
             boxShadow: [
               BoxShadow(
@@ -156,13 +154,13 @@ class _HomePageState extends State<HomePage> {
             children: [
               // WATERMARK LOGO
               Positioned(
-                top: 10 * scaleW,
+                top: 10,
                 child: Opacity(
-                  opacity: 0.6,
+                  opacity: 0.5,
                   child: SvgPicture.asset(
                     'assets/Logo1.svg',
-                    width: 98 * scaleW,
-                    height: 85 * scaleW,
+                    width: 90,
+                    height: 80,
                     fit: BoxFit.contain,
                   ),
                 ),
@@ -170,61 +168,76 @@ class _HomePageState extends State<HomePage> {
 
               Column(
                 children: [
-                  SizedBox(height: 25 * scaleW),
+                  const SizedBox(height: 20),
 
                   // BAR PENCARIAN
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 80 * scaleW),
-                    child: Container(
-                      height: 29 * scaleW,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(25 * scaleW),
-                      ),
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: (value) {
-                          setState(() {
-                            _searchQuery = value.toLowerCase();
-                          });
-                        },
-                        textAlignVertical: TextAlignVertical.center,
-                        decoration: InputDecoration(
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
-                          hintText: 'Sepatu, tas, jasa, dll',
-                          hintStyle: TextStyle(
-                            color: MpusTheme.textSecondaryColor,
-                            fontSize: 14 * scaleW,
+                    padding: const EdgeInsets.symmetric(horizontal: 28),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 420),
+                      child: Container(
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.04),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: (value) {
+                            setState(() {
+                              _searchQuery = value.toLowerCase();
+                            });
+                          },
+                          textAlignVertical: TextAlignVertical.center,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: MpusTheme.textDarkColor,
                             fontFamily: "Roboto",
                           ),
-                          prefixIcon: Icon(
-                            Icons.search,
-                            color: MpusTheme.textSecondaryColor,
-                            size: 22 * scaleW,
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(vertical: 8),
+                            hintText: 'Cari sepatu, tas, buku, jasa, dll...',
+                            hintStyle: TextStyle(
+                              color: MpusTheme.textSecondaryColor,
+                              fontSize: 13.5,
+                              fontFamily: "Roboto",
+                            ),
+                            prefixIcon: Icon(
+                              Icons.search,
+                              color: MpusTheme.textSecondaryColor,
+                              size: 20,
+                            ),
+                            border: InputBorder.none,
                           ),
-                          border: InputBorder.none,
                         ),
                       ),
                     ),
                   ),
 
-                  SizedBox(height: 50 * scaleW),
+                  const SizedBox(height: 32),
 
                   // FILTER ROW
                   Container(
                     width: double.infinity,
-                    padding: EdgeInsets.symmetric(vertical: 5 * scaleW),
+                    padding: const EdgeInsets.symmetric(vertical: 6),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        _buildFilterItem("Terkait", scaleW),
-                        _buildDivider(scaleW),
-                        _buildFilterItem("Terbaru", scaleW),
-                        _buildDivider(scaleW),
-                        _buildFilterItem("Termurah", scaleW),
-                        _buildDivider(scaleW),
-                        _buildFilterItem("Termahal", scaleW),
+                        _buildFilterItem("Terkait"),
+                        _buildDivider(),
+                        _buildFilterItem("Terbaru"),
+                        _buildDivider(),
+                        _buildFilterItem("Termurah"),
+                        _buildDivider(),
+                        _buildFilterItem("Termahal"),
                       ],
                     ),
                   ),
@@ -250,7 +263,7 @@ class _HomePageState extends State<HomePage> {
                   child: Text(
                     "Belum ada barang di kampus ini.\nJadilah yang pertama berjualan!",
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey),
+                    style: TextStyle(color: Colors.grey, fontSize: 14),
                   ),
                 );
               }
@@ -285,21 +298,21 @@ class _HomePageState extends State<HomePage> {
               });
 
               if (products.isEmpty) {
-                return const Center(child: Text("Barang tidak ditemukan."));
+                return const Center(
+                  child: Text(
+                    "Barang tidak ditemukan.",
+                    style: TextStyle(color: Colors.grey, fontSize: 14),
+                  ),
+                );
               }
 
               return GridView.builder(
-                padding: EdgeInsets.only(
-                  top: 15 * scaleW,
-                  left: 15 * scaleW,
-                  right: 15 * scaleW,
-                  bottom: 20 * scaleW,
-                ),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                padding: const EdgeInsets.all(14),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  crossAxisSpacing: 15 * scaleW,
-                  mainAxisSpacing: 15 * scaleW,
-                  childAspectRatio: 0.85,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 0.74,
                 ),
                 itemCount: products.length,
                 itemBuilder: (context, index) {
@@ -323,10 +336,14 @@ class _HomePageState extends State<HomePage> {
                     child: Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(15 * scaleW),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          width: 1,
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.03),
+                            color: Colors.black.withValues(alpha: 0.04),
                             blurRadius: 6,
                             offset: const Offset(0, 2),
                           ),
@@ -336,42 +353,49 @@ class _HomePageState extends State<HomePage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // ── 1. GAMBAR BARANG ──
-                          Container(
-                            height: 130 * scaleW,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE5E5E5),
-                              borderRadius: BorderRadius.vertical(
-                                top: Radius.circular(15 * scaleW),
-                              ),
-                              image: firstImage != null
-                                  ? DecorationImage(
-                                      image: NetworkImage(firstImage),
-                                      fit: BoxFit.cover,
-                                    )
-                                  : null,
+                          ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(14),
                             ),
-                            child: firstImage == null
-                                ? Icon(Icons.image, size: 50 * scaleW, color: Colors.grey)
-                                : null,
+                            child: AspectRatio(
+                              aspectRatio: 1.15,
+                              child: Container(
+                                color: const Color(0xFFF0F4F4),
+                                child: firstImage != null
+                                    ? Image.network(
+                                        firstImage,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (ctx, err, stack) => const Icon(
+                                          Icons.image_not_supported_outlined,
+                                          color: Colors.grey,
+                                          size: 40,
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.image_outlined,
+                                        size: 44,
+                                        color: Colors.grey,
+                                      ),
+                              ),
+                            ),
                           ),
 
                           // ── 2. TEKS BARANG ──
                           Expanded(
                             child: Padding(
-                              padding: EdgeInsets.all(10 * scaleW),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
                                     item['name'] ?? 'Tanpa Nama',
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                     style: GoogleFonts.roboto(
-                                      fontSize: 14 * scaleW,
-                                      color: const Color(0xFF4A4A4A),
+                                      fontSize: 13.5,
+                                      color: const Color(0xFF333333),
                                       fontWeight: FontWeight.w500,
+                                      height: 1.2,
                                     ),
                                   ),
                                   const Spacer(),
@@ -380,7 +404,7 @@ class _HomePageState extends State<HomePage> {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 14 * scaleW,
+                                      fontSize: 14,
                                       fontWeight: FontWeight.bold,
                                       color: MpusTheme.tealDark,
                                     ),
@@ -402,7 +426,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildFilterItem(String title, double scaleW) {
+  Widget _buildFilterItem(String title) {
     bool isSelected = _selectedFilter == title;
     return GestureDetector(
       onTap: () {
@@ -413,20 +437,20 @@ class _HomePageState extends State<HomePage> {
       child: Text(
         title,
         style: TextStyle(
-          fontSize: 13 * scaleW,
+          fontSize: 13,
           fontFamily: "Roboto",
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          color: isSelected ? const Color(0xFF8F8F8F) : MpusTheme.textSecondaryColor,
+          color: isSelected ? const Color(0xFF555555) : MpusTheme.textSecondaryColor,
         ),
       ),
     );
   }
 
-  Widget _buildDivider(double scaleW) {
+  Widget _buildDivider() {
     return Container(
-      height: 15 * scaleW,
-      width: 2 * scaleW,
-      color: MpusTheme.textSecondaryColor,
+      height: 14,
+      width: 1.5,
+      color: MpusTheme.textSecondaryColor.withValues(alpha: 0.6),
     );
   }
 }

@@ -883,8 +883,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
-    double scaleW = screenWidth / 412;
     double statusBarHeight = MediaQuery.of(context).padding.top;
 
     final dynamic rawImages = widget.productData['images'];
@@ -912,28 +910,37 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               ),
             ],
           ),
-          child: GestureDetector(
-            onTap: _showCODBottomSheet,
-            child: Container(
-              height: 52 * scaleW,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: isSold ? Colors.grey.shade300 : MpusTheme.primaryColor,
-                borderRadius: BorderRadius.circular(12),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: GestureDetector(
+                onTap: _showCODBottomSheet,
+                child: Container(
+                  height: 50,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: isSold ? Colors.grey.shade300 : MpusTheme.primaryColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: _isLoadingOrder
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(
+                          _isCurrentUserSeller
+                              ? (_existingOrderId != null ? 'Ada Pengajuan COD (Lihat Status)' : 'Kelola Penjualan Ini')
+                              : (_existingOrderId != null ? 'Lihat Detail Janjian COD' : (isSold ? 'Barang Sudah Terjual' : 'Atur COD / Chat Penjual')),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: isSold ? Colors.grey.shade600 : MpusTheme.textDarkColor,
+                          ),
+                        ),
+                ),
               ),
-              alignment: Alignment.center,
-              child: _isLoadingOrder
-                  ? SizedBox(width: 20 * scaleW, height: 20 * scaleW, child: const CircularProgressIndicator(strokeWidth: 2))
-                  : Text(
-                      _isCurrentUserSeller
-                          ? (_existingOrderId != null ? 'Ada Pengajuan COD (Lihat Status)' : 'Kelola Penjualan Ini')
-                          : (_existingOrderId != null ? 'Lihat Detail Janjian COD' : (isSold ? 'Barang Sudah Terjual' : 'Atur COD / Chat Penjual')),
-                      style: TextStyle(
-                        fontSize: 15 * scaleW,
-                        fontWeight: FontWeight.bold,
-                        color: isSold ? Colors.grey.shade600 : MpusTheme.textDarkColor,
-                      ),
-                    ),
             ),
           ),
         ),
@@ -942,301 +949,306 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         children: [
           SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        MpusTheme.primaryColor,
-                        MpusTheme.primaryColor.withValues(alpha: 0.7),
-                        MpusTheme.backgroundColor,
-                      ],
-                    ),
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(24 * scaleW),
-                      bottomRight: Radius.circular(24 * scaleW),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Stack(
-                        children: [
-                          Padding(
-                            padding: EdgeInsets.only(
-                              top: statusBarHeight + 16 * scaleW,
-                              bottom: 8 * scaleW,
-                              left: 16 * scaleW,
-                              right: 16 * scaleW,
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(16 * scaleW),
-                              child: SizedBox(
-                                height: 280 * scaleW,
-                                width: double.infinity,
-                                child: images.isNotEmpty
-                                    ? PageView.builder(
-                                        controller: _pageController,
-                                        itemCount: images.length,
-                                        onPageChanged: (i) => setState(() => _currentImageIndex = i),
-                                        itemBuilder: (_, i) => Image.network(
-                                          images[i].toString(),
-                                          fit: BoxFit.cover,
-                                          width: double.infinity,
-                                        ),
-                                      )
-                                    : Container(
-                                        color: const Color(0xFFE5E5E5),
-                                        child: Icon(Icons.image_outlined, size: 80 * scaleW, color: Colors.grey),
-                                      ),
-                              ),
-                            ),
-                          ),
-                          if (images.length > 1)
-                            Positioned(
-                              bottom: 16 * scaleW,
-                              left: 0,
-                              right: 0,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: List.generate(
-                                  images.length,
-                                  (i) => AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
-                                    margin: EdgeInsets.symmetric(horizontal: 3 * scaleW),
-                                    width: _currentImageIndex == i ? 12 * scaleW : 6 * scaleW,
-                                    height: 6 * scaleW,
-                                    decoration: BoxDecoration(
-                                      color: _currentImageIndex == i ? Colors.white : Colors.white60,
-                                      borderRadius: BorderRadius.circular(3),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-
-                      Padding(
-                        padding: EdgeInsets.fromLTRB(16 * scaleW, 8 * scaleW, 16 * scaleW, 16 * scaleW),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  _formatPrice(widget.productData['price']),
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 22 * scaleW,
-                                    fontWeight: FontWeight.bold,
-                                    color: MpusTheme.tealDark,
-                                  ),
-                                ),
-                                if (isSold)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.red.shade100,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: const Text('TERJUAL', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11)),
-                                  ),
-                              ],
-                            ),
-                            SizedBox(height: 6 * scaleW),
-                            Text(
-                              widget.productData['name']?.toString() ?? 'Nama Produk',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 18 * scaleW,
-                                fontWeight: FontWeight.bold,
-                                color: MpusTheme.textDarkColor,
-                              ),
-                            ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 520),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            MpusTheme.primaryColor,
+                            MpusTheme.primaryColor.withValues(alpha: 0.7),
+                            MpusTheme.backgroundColor,
                           ],
                         ),
-                      ),
-
-                      // Seller Card
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16 * scaleW),
-                        child: Container(
-                          padding: EdgeInsets.all(14 * scaleW),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16 * scaleW),
-                            boxShadow: [
-                              BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))
-                            ],
-                          ),
-                          child: _isLoadingSeller
-                              ? const LinearProgressIndicator()
-                              : Row(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 26 * scaleW,
-                                      backgroundColor: const Color(0xFFE5E5E5),
-                                      backgroundImage: _sellerData?['avatar_url'] != null && _sellerData!['avatar_url'].toString().isNotEmpty
-                                          ? NetworkImage(_sellerData!['avatar_url'].toString())
-                                          : null,
-                                      child: (_sellerData?['avatar_url'] == null || _sellerData!['avatar_url'].toString().isEmpty)
-                                          ? Icon(Icons.person, color: Colors.grey, size: 28 * scaleW)
-                                          : null,
-                                    ),
-                                    SizedBox(width: 12 * scaleW),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            _sellerData?['name']?.toString() ?? 'Penjual Mpus',
-                                            style: GoogleFonts.plusJakartaSans(
-                                              fontSize: 15 * scaleW,
-                                              fontWeight: FontWeight.bold,
-                                              color: MpusTheme.textDarkColor,
-                                            ),
-                                          ),
-                                          Text(
-                                            _sellerData?['campus_name']?.toString() ?? 'Kampus Mahasiswa',
-                                            style: GoogleFonts.roboto(
-                                              fontSize: 12 * scaleW,
-                                              color: const Color(0xFF8F8F8F),
-                                            ),
-                                          ),
-                                          SizedBox(height: 2 * scaleW),
-                                          Row(
-                                            children: [
-                                              Icon(Icons.star_rounded, color: Colors.amber, size: 16 * scaleW),
-                                              SizedBox(width: 3 * scaleW),
-                                              Text(
-                                                _getRatingText(_sellerData),
-                                                style: TextStyle(
-                                                  fontSize: 11 * scaleW,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: const Color(0xFF8F8F8F),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    GestureDetector(
-                                      onTap: () => _openWhatsApp(
-                                        _sellerData?['phone']?.toString(),
-                                        widget.productData['name']?.toString() ?? 'Produk',
-                                        _formatPrice(widget.productData['price']),
-                                      ),
-                                      child: Container(
-                                        padding: EdgeInsets.all(8 * scaleW),
-                                        decoration: BoxDecoration(
-                                          color: Colors.green.shade50,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Icon(Icons.chat_outlined, color: Colors.green, size: 22 * scaleW),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(24),
+                          bottomRight: Radius.circular(24),
                         ),
                       ),
-                      SizedBox(height: 14 * scaleW),
-                    ],
-                  ),
-                ),
-
-                // Digital Payment Options (QRIS / E-Wallet)
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16 * scaleW, vertical: 8 * scaleW),
-                  child: InkWell(
-                    onTap: _showQrisModal,
-                    borderRadius: BorderRadius.circular(14 * scaleW),
-                    child: Container(
-                      padding: EdgeInsets.all(14 * scaleW),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14 * scaleW),
-                        border: Border.all(color: const Color(0xFF00C4B4).withValues(alpha: 0.3)),
-                      ),
-                      child: Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: MpusTheme.primaryColor.withValues(alpha: 0.3),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(Icons.qr_code_2_rounded, color: MpusTheme.tealDark, size: 24),
+                          Stack(
+                            children: [
+                              Padding(
+                                padding: EdgeInsets.only(
+                                  top: statusBarHeight + 16,
+                                  bottom: 8,
+                                  left: 16,
+                                  right: 16,
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: SizedBox(
+                                    height: 280,
+                                    width: double.infinity,
+                                    child: images.isNotEmpty
+                                        ? PageView.builder(
+                                            controller: _pageController,
+                                            itemCount: images.length,
+                                            onPageChanged: (i) => setState(() => _currentImageIndex = i),
+                                            itemBuilder: (_, i) => Image.network(
+                                              images[i].toString(),
+                                              fit: BoxFit.cover,
+                                              width: double.infinity,
+                                            ),
+                                          )
+                                        : Container(
+                                            color: const Color(0xFFE5E5E5),
+                                            child: const Icon(Icons.image_outlined, size: 80, color: Colors.grey),
+                                          ),
+                                  ),
+                                ),
+                              ),
+                              if (images.length > 1)
+                                Positioned(
+                                  bottom: 16,
+                                  left: 0,
+                                  right: 0,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: List.generate(
+                                      images.length,
+                                      (i) => AnimatedContainer(
+                                        duration: const Duration(milliseconds: 200),
+                                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                                        width: _currentImageIndex == i ? 12 : 6,
+                                        height: 6,
+                                        decoration: BoxDecoration(
+                                          color: _currentImageIndex == i ? Colors.white : Colors.white60,
+                                          borderRadius: BorderRadius.circular(3),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
-                          SizedBox(width: 12 * scaleW),
-                          Expanded(
+
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Opsi Pembayaran QRIS / E-Wallet', style: GoogleFonts.plusJakartaSans(fontSize: 13 * scaleW, fontWeight: FontWeight.bold, color: MpusTheme.textDarkColor)),
-                                Text('Lihat kode QRIS atau nomor transfer toko', style: TextStyle(fontSize: 11 * scaleW, color: Colors.grey)),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      _formatPrice(widget.productData['price']),
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                        color: MpusTheme.tealDark,
+                                      ),
+                                    ),
+                                    if (isSold)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.red.shade100,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Text('TERJUAL', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11)),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  widget.productData['name']?.toString() ?? 'Nama Produk',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: MpusTheme.textDarkColor,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
-                          const Icon(Icons.chevron_right, color: Colors.grey),
+
+                          // Seller Card
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))
+                                ],
+                              ),
+                              child: _isLoadingSeller
+                                  ? const LinearProgressIndicator()
+                                  : Row(
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 24,
+                                          backgroundColor: const Color(0xFFE5E5E5),
+                                          backgroundImage: _sellerData?['avatar_url'] != null && _sellerData!['avatar_url'].toString().isNotEmpty
+                                              ? NetworkImage(_sellerData!['avatar_url'].toString())
+                                              : null,
+                                          child: (_sellerData?['avatar_url'] == null || _sellerData!['avatar_url'].toString().isEmpty)
+                                              ? const Icon(Icons.person, color: Colors.grey, size: 26)
+                                              : null,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                _sellerData?['name']?.toString() ?? 'Penjual Mpus',
+                                                style: GoogleFonts.plusJakartaSans(
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: MpusTheme.textDarkColor,
+                                                ),
+                                              ),
+                                              Text(
+                                                _sellerData?['campus_name']?.toString() ?? 'Kampus Mahasiswa',
+                                                style: GoogleFonts.roboto(
+                                                  fontSize: 12,
+                                                  color: const Color(0xFF8F8F8F),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Row(
+                                                children: [
+                                                  const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                                                  const SizedBox(width: 3),
+                                                  Text(
+                                                    _getRatingText(_sellerData),
+                                                    style: const TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: Color(0xFF8F8F8F),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        GestureDetector(
+                                          onTap: () => _openWhatsApp(
+                                            _sellerData?['phone']?.toString(),
+                                            widget.productData['name']?.toString() ?? 'Produk',
+                                            _formatPrice(widget.productData['price']),
+                                          ),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              color: Colors.green.shade50,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(Icons.chat_outlined, color: Colors.green, size: 22),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
                         ],
                       ),
                     ),
-                  ),
-                ),
 
-                // Product Description
-                Padding(
-                  padding: EdgeInsets.all(16 * scaleW),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Deskripsi Barang',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 16 * scaleW,
-                          fontWeight: FontWeight.bold,
-                          color: MpusTheme.textDarkColor,
-                        ),
-                      ),
-                      SizedBox(height: 8 * scaleW),
-                      Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.all(14 * scaleW),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(14 * scaleW),
-                        ),
-                        child: Text(
-                          widget.productData['description']?.toString() ?? 'Tidak ada deskripsi rinci untuk produk ini.',
-                          style: GoogleFonts.roboto(
-                            fontSize: 14 * scaleW,
-                            color: const Color(0xFF4A5568),
-                            height: 1.5,
+                    // Digital Payment Options (QRIS / E-Wallet)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: InkWell(
+                        onTap: _showQrisModal,
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFF00C4B4).withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: MpusTheme.primaryColor.withValues(alpha: 0.3),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Icons.qr_code_2_rounded, color: MpusTheme.tealDark, size: 24),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Opsi Pembayaran QRIS / E-Wallet', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold, color: MpusTheme.textDarkColor)),
+                                    const Text('Lihat kode QRIS atau nomor transfer toko', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.chevron_right, color: Colors.grey),
+                            ],
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+
+                    // Product Description
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Deskripsi Barang',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: MpusTheme.textDarkColor,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Text(
+                              widget.productData['description']?.toString() ?? 'Tidak ada deskripsi rinci untuk produk ini.',
+                              style: GoogleFonts.roboto(
+                                fontSize: 14,
+                                color: const Color(0xFF4A5568),
+                                height: 1.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                  ],
                 ),
-                SizedBox(height: 40 * scaleW),
-              ],
+              ),
             ),
           ),
 
           Positioned(
-            top: statusBarHeight + 12 * scaleW,
-            left: 16 * scaleW,
+            top: statusBarHeight + 12,
+            left: 16,
             child: GestureDetector(
               onTap: () => Navigator.pop(context),
               child: Container(
-                width: 38 * scaleW,
-                height: 38 * scaleW,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
@@ -1244,7 +1256,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 8, offset: const Offset(0, 2))
                   ],
                 ),
-                child: Icon(Icons.arrow_back_rounded, color: MpusTheme.textDarkColor, size: 20 * scaleW),
+                child: const Icon(Icons.arrow_back_rounded, color: MpusTheme.textDarkColor, size: 20),
               ),
             ),
           ),

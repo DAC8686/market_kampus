@@ -26,15 +26,45 @@ class KTMVerificationResult {
   });
 
   factory KTMVerificationResult.fromJson(Map<String, dynamic> json) {
+    final extracted = json['extracted_data'] is Map<String, dynamic>
+        ? json['extracted_data'] as Map<String, dynamic>
+        : null;
+    final bool isSuccess = json['success'] == true ||
+        json['is_valid'] == true ||
+        json['status'] == 'SUCCESS' ||
+        json['status'] == 'VERIFIED' ||
+        json['status'] == 'REVIEW';
+
+    String? foundNim = json['student_nim']?.toString() ??
+        extracted?['detected_nim']?.toString() ??
+        json['detected_nim']?.toString();
+    if (foundNim != null && (foundNim == 'null' || foundNim.trim().isEmpty)) {
+      foundNim = null;
+    }
+
+    String? foundName = json['student_name']?.toString() ??
+        extracted?['detected_name']?.toString() ??
+        json['detected_name']?.toString();
+    if (foundName != null && (foundName == 'null' || foundName.trim().isEmpty)) {
+      foundName = null;
+    }
+
+    String? foundCampus = json['campus_name']?.toString() ??
+        extracted?['detected_university']?.toString() ??
+        json['detected_university']?.toString();
+    if (foundCampus != null && (foundCampus == 'null' || foundCampus.trim().isEmpty)) {
+      foundCampus = null;
+    }
+
     return KTMVerificationResult(
-      success: json['success'] ?? false,
-      status: json['status'] ?? 'UNKNOWN',
-      studentName: json['student_name'],
-      studentNim: json['student_nim'],
-      campusName: json['campus_name'],
-      confidenceScore: (json['confidence_score'] as num?)?.toDouble() ?? 0.0,
-      rawText: json['raw_text'] ?? '',
-      errorMessage: json['error_message'],
+      success: isSuccess,
+      status: json['status']?.toString() ?? 'SUCCESS',
+      studentName: foundName,
+      studentNim: foundNim,
+      campusName: foundCampus,
+      confidenceScore: (json['confidence_score'] ?? extracted?['confidence_score'] as num?)?.toDouble() ?? 0.95,
+      rawText: json['raw_text']?.toString() ?? extracted?['raw_text']?.toString() ?? '',
+      errorMessage: json['error_message']?.toString() ?? json['message']?.toString(),
     );
   }
 
@@ -58,14 +88,18 @@ class OcrApiService {
   // Verify KTM by uploading an image file directly to the Python OCR Microservice
   Future<KTMVerificationResult> verifyKtmImage({
     required File imageFile,
+    String? expectedNim,
     String? expectedName,
     String? expectedCampus,
   }) async {
-    // List candidate URLs: default base, plus emulator / localhost fallbacks
+    // List candidate URLs: Production Vercel cloud domain first, followed by fallbacks
     final candidateUrls = <String>{
+      'https://mpus.daczdev.id', // Production Vercel Serverless
       baseUrl,
-      'http://127.0.0.1:8000',
+      'http://100.64.159.25:8000', // Tailscale Dev Host
+      'http://10.11.111.225:8000', // Local LAN Dev Host
       'http://10.0.2.2:8000',
+      'http://127.0.0.1:8000',
     }.toList();
 
     for (final host in candidateUrls) {
@@ -80,6 +114,9 @@ class OcrApiService {
           http.MultipartFile.fromBytes('file', bytes, filename: filename),
         );
 
+        if (expectedNim != null && expectedNim.isNotEmpty) {
+          request.fields['expected_nim'] = expectedNim;
+        }
         if (expectedName != null && expectedName.isNotEmpty) {
           request.fields['expected_name'] = expectedName;
         }
@@ -88,7 +125,7 @@ class OcrApiService {
         }
 
         final streamedResponse = await _httpClient.send(request).timeout(
-          const Duration(seconds: 6),
+          const Duration(seconds: 25),
         );
 
         final response = await http.Response.fromStream(streamedResponse);
@@ -113,10 +150,10 @@ class OcrApiService {
 
   // Check health of OCR service
   Future<bool> checkHealth() async {
-    for (final host in [baseUrl, 'http://127.0.0.1:8000', 'http://10.0.2.2:8000']) {
+    for (final host in [baseUrl, 'https://mpus.daczdev.id', 'http://10.0.2.2:8000', 'http://127.0.0.1:8000']) {
       try {
         final uri = Uri.parse('$host/health');
-        final response = await _httpClient.get(uri).timeout(const Duration(seconds: 2));
+        final response = await _httpClient.get(uri).timeout(const Duration(seconds: 3));
         if (response.statusCode == 200) return true;
       } catch (_) {}
     }

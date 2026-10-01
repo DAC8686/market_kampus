@@ -32,6 +32,12 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Pastikan kolom baru otomatis terpasang pada database yang sudah dibuat sebelumnya
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS nim TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS verification_status TEXT DEFAULT 'UNVERIFIED';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS campus_name TEXT DEFAULT 'Kampus';
+
 -- RLS: Profiles
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 

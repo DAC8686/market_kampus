@@ -16,10 +16,15 @@ class ExtractedKTMData(BaseModel):
     confidence_score: float = 0.0
 
 class KTMVerificationResponse(BaseModel):
+    success: bool = True
     status: str = Field(..., description="SUCCESS / REVIEW / REJECTED")
-    is_valid: bool
+    is_valid: bool = True
     match_nim: bool = False
     match_name: bool = False
+    student_name: Optional[str] = None
+    student_nim: Optional[str] = None
+    campus_name: Optional[str] = None
     message: str
+    error_message: Optional[str] = None
     extracted_data: ExtractedKTMData
     metadata: Dict[str, Any] = {}

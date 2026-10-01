@@ -5,9 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import '../../core/theme/mpus_theme.dart';
 import '../../data/services/auth_service.dart';
-import '../../data/services/profile_service.dart';
 import '../auth/login_page.dart';
-import '../auth/complete_profile_page.dart';
 import '../catalog/home_page.dart';
 
 class SplashPage extends StatefulWidget {
@@ -19,7 +17,6 @@ class SplashPage extends StatefulWidget {
 
 class _SplashPageState extends State<SplashPage> {
   final AuthService _authService = AuthService();
-  final ProfileService _profileService = ProfileService();
 
   @override
   void initState() {
@@ -43,25 +40,10 @@ class _SplashPageState extends State<SplashPage> {
       if (!mounted) return;
 
       if (_authService.isAuthenticated) {
-        final userId = _authService.currentUserId;
-        bool isComplete = true;
-        if (userId != null) {
-          isComplete = await _profileService.isProfileComplete(userId);
-        }
-
-        if (!mounted) return;
-
-        if (isComplete) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const HomePage()),
-          );
-        } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const CompleteProfilePage()),
-          );
-        }
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomePage()),
+        );
       } else {
         Navigator.pushReplacement(
           context,
@@ -101,48 +83,61 @@ class _SplashPageState extends State<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
-    double screenHeight = MediaQuery.of(context).size.height;
-
-    double scaleW = screenWidth / 412;
-    double scaleH = screenHeight / 920;
-
     return Scaffold(
       backgroundColor: MpusTheme.primaryColor,
-      body: Stack(
-        children: [
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SvgPicture.asset(
-                  'assets/LogoMpus.svg',
-                  height: 120 * scaleW,
-                  placeholderBuilder: (BuildContext context) => SizedBox(
-                    width: 48 * scaleW,
-                    height: 48 * scaleW,
-                    child: LoadingAnimationWidget.staggeredDotsWave(
-                      color: MpusTheme.textSecondaryColor,
-                      size: 48 * scaleW,
-                    ),
+      body: SafeArea(
+        child: SizedBox(
+          width: double.infinity,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Spacer(flex: 3),
+              SvgPicture.asset(
+                'assets/LogoMpus.svg',
+                height: 120,
+                placeholderBuilder: (BuildContext context) => SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: LoadingAnimationWidget.staggeredDotsWave(
+                    color: MpusTheme.textSecondaryColor,
+                    size: 48,
                   ),
                 ),
-              ],
-            ),
-          ),
-          Positioned(
-            left: 182 * scaleW,
-            top: 818 * scaleH,
-            child: SizedBox(
-              width: 48 * scaleW,
-              height: 48 * scaleW,
-              child: LoadingAnimationWidget.staggeredDotsWave(
-                color: MpusTheme.textSecondaryColor,
-                size: 48 * scaleW,
               ),
-            ),
+              const SizedBox(height: 16),
+              const Text(
+                "MPUS",
+                style: TextStyle(
+                  fontFamily: "Roboto",
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.5,
+                  color: MpusTheme.textSecondaryColor,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                "Marketplace Kampus Terpercaya",
+                style: TextStyle(
+                  fontFamily: "Roboto",
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF555555),
+                ),
+              ),
+              const Spacer(flex: 3),
+              SizedBox(
+                width: 40,
+                height: 40,
+                child: LoadingAnimationWidget.staggeredDotsWave(
+                  color: MpusTheme.textSecondaryColor,
+                  size: 40,
+                ),
+              ),
+              const SizedBox(height: 32),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

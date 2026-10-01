@@ -19,15 +19,15 @@ class KTROcrEngine:
 
     def __init__(self):
         self.gemini_api_key = os.getenv("GEMINI_API_KEY", "")
-        self.gemini_model = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
+        self.gemini_model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
     # Regex pattern fallback for Indonesian NIM
     NIM_PATTERN = re.compile(r'(?:NIM|NPM|NRP|NOMOR\s+INDUK|NO\s+MAHASISWA)[:\s\.\-]*([A-Z0-9\.\-]{6,16})', re.IGNORECASE)
-    FALLBACK_NUMERIC_NIM = re.compile(r'\b\d{8,14}\b')
+    FALLBACK_NUMERIC_NIM = re.compile(r'\b\d{6,16}\b')
 
     UNIVERSITY_KEYWORDS = [
-        "UNIVERSITAS", "INSTITUT", "POLITEKNIK", "SEKOLAH TINGGI",
-        "UNUGIRI", "UGM", "ITB", "UI", "UNAIR", "ITS", "UNESA", "UNDIP", "UB"
+        "UNIVERSITAS", "INSTITUT", "POLITEKNIK", "SEKOLAH TINGGI", "AKADEMI",
+        "UNUGIRI", "UGM", "ITB", "UI", "UNAIR", "ITS", "UNESA", "UNDIP", "UB", "UNY", "UIN"
     ]
 
     async def fetch_image_bytes(self, image_url: str) -> bytes:
@@ -54,18 +54,27 @@ class KTROcrEngine:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.gemini_model}:generateContent?key={self.gemini_api_key}"
 
         prompt = (
-            "Kamu adalah AI Validator Resmi Kartu Tanda Mahasiswa (KTM) Kampus di Indonesia untuk marketplace mahasiswa MPUS.\n"
-            "Tugasmu: Analisis foto kartu ini dengan teliti.\n"
-            "Ekstrak data penting dan validasi keasliannya.\n"
-            "Berikan output HANYA dalam format JSON valid (tanpa markdown backtick):\n"
+            "Kamu adalah AI Vision Expert Validator Kartu Tanda Mahasiswa (KTM) perguruan tinggi di Indonesia untuk platform MPUS.\n"
+            "Tugasmu: Analisis dan baca foto kartu ini dengan teliti.\n\n"
+            "PANDUAN ANALISIS:\n"
+            "1. Kartu Tanda Mahasiswa (KTM) di Indonesia memiliki banyak variasi desain (KTM cetak standar, KTM combo Debit/ATM BNI/Mandiri/BRI/BSI, KTM barcode/smartcard, hingga KTM digital resmi kampus).\n"
+            "2. Baca secara cermat seluruh teks pada kartu, terutama:\n"
+            "   - Nama Mahasiswa\n"
+            "   - Nomor Induk Mahasiswa (NIM / NPM / NRP / NIRM / No Mahasiswa / No Pokok / Student ID)\n"
+            "   - Nama Perguruan Tinggi / Universitas / Institut / Politeknik / STIKES / Akademi\n"
+            "   - Fakultas / Program Studi (jika ada)\n"
+            f"{f'3. Periksa kecocokan nomor NIM dengan input pendaftar: \"{expected_nim}\". Abaikan perbedaan tanda baca seperti titik (.), strip (-), spasi, atau prefix huruf.' if expected_nim else ''}\n"
+            "4. Jika kartu merupakan KTM yang sah dan memiliki nomor NIM/identitas mahasiswa yang dapat diidentifikasi, set `is_valid_ktm: true`.\n"
+            "5. Jika foto jelas-jelas BUKAN kartu identitas mahasiswa (misal: foto pemandangan, foto selfie tanpa kartu, KTP non-mahasiswa, struk belanja), set `is_valid_ktm: false`.\n\n"
+            "Berikan output HANYA dalam format JSON valid berikut:\n"
             "{\n"
-            '  "is_valid_ktm": true / false,\n'
-            '  "student_name": "Nama lengkap mahasiswa jika terbaca",\n'
-            '  "student_nim": "NIM / NPM mahasiswa (hanya angka/huruf)",\n'
-            '  "campus_name": "Nama universitas / kampus (misal: UNUGIRI, UNESA, ITB, dsb)",\n'
+            '  "is_valid_ktm": true,\n'
+            '  "student_name": "Nama lengkap mahasiswa jika terbaca (atau null)",\n'
+            '  "student_nim": "NIM/NPM mahasiswa (hanya alfanumerik tanpa spasi/tanda baca)",\n'
+            '  "campus_name": "Nama universitas / kampus / perguruan tinggi",\n'
             '  "faculty_major": "Fakultas / Program Studi jika tertera",\n'
             '  "confidence_score": 0.95,\n'
-            '  "reason": "Alasan singkat verifikasi"\n'
+            '  "reason": "Penjelasan singkat hasil pembacaan KTM"\n'
             "}"
         )
 
@@ -88,7 +97,7 @@ class KTROcrEngine:
         }
 
         try:
-            async with httpx.AsyncClient(timeout=20.0) as client:
+            async with httpx.AsyncClient(timeout=25.0) as client:
                 response = await client.post(url, json=payload)
                 if response.status_code == 200:
                     data = response.json()
@@ -98,7 +107,11 @@ class KTROcrEngine:
                         # Clean if there's markdown wrapper
                         raw_json_str = re.sub(r'^```json\s*', '', raw_json_str.strip())
                         raw_json_str = re.sub(r'\s*```$', '', raw_json_str.strip())
-                        return json.loads(raw_json_str)
+                        parsed = json.loads(raw_json_str)
+                        print(f"[Gemini OCR Success] Result: {parsed}")
+                        return parsed
+                else:
+                    print(f"[Gemini OCR Error] HTTP {response.status_code}: {response.text}")
         except Exception as e:
             print(f"[Gemini OCR Warning] Vision API error: {e}")
 

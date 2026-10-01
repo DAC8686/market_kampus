@@ -53,22 +53,33 @@ class ProfileService {
     String? phone,
     String? nim,
     String? campusName,
+    bool? isKtmVerified,
+    String? verificationStatus,
+    String? ktmImageUrl,
     String? ewalletName,
     String? ewalletNumber,
   }) async {
-    Map<String, dynamic> updates = {
+    Map<String, dynamic> data = {
+      'id': userId,
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     };
 
-    if (name != null) updates['name'] = name.trim();
-    if (email != null) updates['email'] = email.trim();
-    if (phone != null) updates['phone'] = phone.trim();
-    if (nim != null) updates['nim'] = nim.trim();
-    if (campusName != null) updates['campus_name'] = campusName.trim();
-    if (ewalletName != null) updates['ewallet_name'] = ewalletName.trim();
-    if (ewalletNumber != null) updates['ewallet_number'] = ewalletNumber.trim();
+    if (name != null) data['name'] = name.trim();
+    if (email != null) data['email'] = email.trim();
+    if (phone != null) data['phone'] = phone.trim();
+    if (nim != null) data['nim'] = nim.trim();
+    if (campusName != null) data['campus_name'] = campusName.trim();
+    if (isKtmVerified != null) data['is_ktm_verified'] = isKtmVerified;
+    if (verificationStatus != null) data['verification_status'] = verificationStatus.trim();
+    if (ktmImageUrl != null) data['ktm_image_url'] = ktmImageUrl.trim();
+    if (ewalletName != null) data['ewallet_name'] = ewalletName.trim();
+    if (ewalletNumber != null) data['ewallet_number'] = ewalletNumber.trim();
 
-    await _client.from('profiles').update(updates).eq('id', userId);
+    try {
+      await _client.from('profiles').upsert(data);
+    } catch (_) {
+      await _client.from('profiles').update(data).eq('id', userId);
+    }
   }
 
   // Upload and submit KTM verification

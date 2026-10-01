@@ -8,7 +8,6 @@ import '../../core/theme/mpus_theme.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/services/product_service.dart';
 import '../../data/services/profile_service.dart';
-import '../auth/complete_profile_page.dart';
 
 class ProductFormPage extends StatefulWidget {
   final Map<String, dynamic>? productToEdit;
@@ -72,21 +71,24 @@ class _ProductFormPageState extends State<ProductFormPage> {
     final desc = _descController.text.trim();
 
     if (name.isEmpty || priceStr.isEmpty || desc.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Harap isi semua kolom wajib")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Harap isi semua kolom wajib")),
+      );
       return;
     }
 
     final double price = double.tryParse(priceStr) ?? 0;
     if (price <= 0) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Harga barang harus lebih dari Rp 0")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Harga barang harus lebih dari Rp 0")),
+      );
       return;
     }
 
     if (_existingImageUrls.isEmpty && _productImages.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Harap tambahkan minimal 1 gambar produk")));
+        const SnackBar(content: Text("Harap tambahkan minimal 1 gambar produk")),
+      );
       return;
     }
 
@@ -107,18 +109,9 @@ class _ProductFormPageState extends State<ProductFormPage> {
         if (!mounted) return;
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text("Harap lengkapi WhatsApp dan verifikasi KTM sebelum menjual barang."),
-            action: SnackBarAction(
-              label: "Verifikasi",
-              textColor: Colors.amber,
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const CompleteProfilePage()),
-                );
-              },
-            ),
+          const SnackBar(
+            content: Text("Harap pastikan nomor WhatsApp dan verifikasi KTM sudah aktif di profil sebelum menjual barang."),
+            backgroundColor: Colors.amber,
           ),
         );
         return;
@@ -156,8 +149,9 @@ class _ProductFormPageState extends State<ProductFormPage> {
       Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text("Gagal menyimpan barang: $e")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Gagal menyimpan barang: $e")),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -166,7 +160,9 @@ class _ProductFormPageState extends State<ProductFormPage> {
 
   Future<void> _pickImage() async {
     if (_existingImageUrls.length + _productImages.length >= 3) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Maksimal 3 gambar saja")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Maksimal 3 gambar saja")),
+      );
       return;
     }
 
@@ -204,9 +200,6 @@ class _ProductFormPageState extends State<ProductFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
-    double scaleW = screenWidth / 412;
-
     return Scaffold(
       backgroundColor: MpusTheme.backgroundColor,
       appBar: AppBar(
@@ -214,211 +207,250 @@ class _ProductFormPageState extends State<ProductFormPage> {
         elevation: 0,
         title: Text(
           widget.productId == null ? "Tambah Barang" : "Edit Barang",
-          style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            color: MpusTheme.textDarkColor,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
         ),
         leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: Colors.black87,
-            size: 26 * scaleW,
+          icon: const Icon(
+            Icons.arrow_back_rounded,
+            color: MpusTheme.textDarkColor,
+            size: 24,
           ),
           onPressed: () {
             Navigator.pop(context);
           },
         ),
       ),
-      bottomNavigationBar: GestureDetector(
-        onTap: _isLoading ? null : _submitProduct,
-        child: Container(
-          height: 56 * scaleW,
-          width: double.infinity,
-          color: _isLoading ? Colors.grey : MpusTheme.primaryColor,
-          alignment: Alignment.center,
-          child: _isLoading
-              ? const CircularProgressIndicator(color: Colors.white)
-              : Text(
-                  widget.productId == null
-                      ? "Tambah Barang"
-                      : "Simpan Perubahan",
-                  style: TextStyle(
-                    color: MpusTheme.textDarkColor,
-                    fontSize: 16 * scaleW,
-                    fontFamily: "Roboto",
-                    fontWeight: FontWeight.bold,
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: SizedBox(
+              height: 50,
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _submitProduct,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: MpusTheme.primaryColor,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
                   ),
                 ),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: MpusTheme.textDarkColor,
+                        ),
+                      )
+                    : Text(
+                        widget.productId == null
+                            ? "Tambah Barang"
+                            : "Simpan Perubahan",
+                        style: const TextStyle(
+                          color: MpusTheme.textDarkColor,
+                          fontSize: 15,
+                          fontFamily: "Roboto",
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              ),
+            ),
+          ),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: 20 * scaleW),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: 10 * scaleW),
-
-            // 1. TAMBAH GAMBAR (Maks 3)
-            _buildLabel("Tambah Gambar (Maks. 3)", scaleW),
-            SizedBox(height: 8 * scaleW),
-            Row(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ..._existingImageUrls.map(
-                  (url) => Stack(
-                    children: [
-                      Container(
-                        margin: EdgeInsets.only(right: 12 * scaleW),
-                        width: 72 * scaleW,
-                        height: 72 * scaleW,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10 * scaleW),
-                          image: DecorationImage(
-                            image: NetworkImage(url),
-                            fit: BoxFit.cover,
+                // 1. TAMBAH GAMBAR (Maks 3)
+                _buildLabel("Tambah Gambar (Maks. 3)"),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    ..._existingImageUrls.map(
+                      (url) => Stack(
+                        children: [
+                          Container(
+                            margin: const EdgeInsets.only(right: 12),
+                            width: 72,
+                            height: 72,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10),
+                              image: DecorationImage(
+                                image: NetworkImage(url),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                      Positioned(
-                        top: 2,
-                        right: 14 * scaleW,
-                        child: GestureDetector(
-                          onTap: () => setState(() => _existingImageUrls.remove(url)),
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                            child: const Icon(Icons.close, size: 14, color: Colors.white),
+                          Positioned(
+                            top: 2,
+                            right: 14,
+                            child: GestureDetector(
+                              onTap: () => setState(() => _existingImageUrls.remove(url)),
+                              child: Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.close, size: 14, color: Colors.white),
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                ..._productImages.map(
-                  (file) => Stack(
-                    children: [
-                      Container(
-                        margin: EdgeInsets.only(right: 12 * scaleW),
-                        width: 72 * scaleW,
-                        height: 72 * scaleW,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10 * scaleW),
-                          image: DecorationImage(
-                            image: FileImage(file),
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: 2,
-                        right: 14 * scaleW,
-                        child: GestureDetector(
-                          onTap: () => setState(() => _productImages.remove(file)),
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                            child: const Icon(Icons.close, size: 14, color: Colors.white),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (_existingImageUrls.length + _productImages.length < 3)
-                  GestureDetector(
-                    onTap: _pickImage,
-                    child: Container(
-                      width: 72 * scaleW,
-                      height: 72 * scaleW,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(
-                          color: MpusTheme.textSecondaryColor,
-                          width: 1.5,
-                        ),
-                        borderRadius: BorderRadius.circular(10 * scaleW),
-                      ),
-                      child: Icon(
-                        Icons.add_a_photo_outlined,
-                        color: const Color(0xFF8F8F8F),
-                        size: 26 * scaleW,
+                        ],
                       ),
                     ),
-                  ),
-              ],
-            ),
-            SizedBox(height: 20 * scaleW),
-
-            // 2. KATEGORI BARANG
-            _buildLabel("Kategori Barang", scaleW),
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 14 * scaleW),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10 * scaleW),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _selectedCategory,
-                  isExpanded: true,
-                  items: _categories.map((cat) {
-                    return DropdownMenuItem(
-                      value: cat,
-                      child: Text(cat, style: TextStyle(fontSize: 14 * scaleW, color: MpusTheme.textDarkColor)),
-                    );
-                  }).toList(),
-                  onChanged: (val) {
-                    if (val != null) setState(() => _selectedCategory = val);
-                  },
+                    ..._productImages.map(
+                      (file) => Stack(
+                        children: [
+                          Container(
+                            margin: const EdgeInsets.only(right: 12),
+                            width: 72,
+                            height: 72,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10),
+                              image: DecorationImage(
+                                image: FileImage(file),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 2,
+                            right: 14,
+                            child: GestureDetector(
+                              onTap: () => setState(() => _productImages.remove(file)),
+                              child: Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.close, size: 14, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_existingImageUrls.length + _productImages.length < 3)
+                      GestureDetector(
+                        onTap: _pickImage,
+                        child: Container(
+                          width: 72,
+                          height: 72,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border.all(
+                              color: MpusTheme.textSecondaryColor,
+                              width: 1.5,
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.add_a_photo_outlined,
+                            color: Color(0xFF8F8F8F),
+                            size: 26,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-              ),
-            ),
-            SizedBox(height: 16 * scaleW),
+                const SizedBox(height: 20),
 
-            // 3. NAMA BARANG
-            _buildLabel("Nama barang", scaleW),
-            _buildTextField(
-              controller: _nameController,
-              hintText: "misal: Buku Kalkulus Edisi 9 / Keyboard RGB",
-              scaleW: scaleW,
-            ),
-            SizedBox(height: 16 * scaleW),
+                // 2. KATEGORI BARANG
+                _buildLabel("Kategori Barang"),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: Colors.black.withValues(alpha: 0.05),
+                    ),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _selectedCategory,
+                      isExpanded: true,
+                      items: _categories.map((cat) {
+                        return DropdownMenuItem(
+                          value: cat,
+                          child: Text(
+                            cat,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: MpusTheme.textDarkColor,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) setState(() => _selectedCategory = val);
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
 
-            // 4. HARGA
-            _buildLabel("Harga", scaleW),
-            _buildTextField(
-              controller: _priceController,
-              hintText: "Rp 50.000",
-              keyboardType: TextInputType.number,
-              scaleW: scaleW,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                CurrencyInputFormatter(),
+                // 3. NAMA BARANG
+                _buildLabel("Nama Barang"),
+                _buildTextField(
+                  controller: _nameController,
+                  hintText: "misal: Buku Kalkulus Edisi 9 / Keyboard RGB",
+                ),
+                const SizedBox(height: 16),
+
+                // 4. HARGA
+                _buildLabel("Harga"),
+                _buildTextField(
+                  controller: _priceController,
+                  hintText: "Rp 50.000",
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    CurrencyInputFormatter(),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // 5. DESKRIPSI
+                _buildLabel("Deskripsi"),
+                _buildTextField(
+                  controller: _descController,
+                  hintText: "Jelaskan kondisi barang, kelengkapan, garansi, atau tempat yang cocok untuk COD...",
+                  maxLines: 4,
+                ),
+                const SizedBox(height: 30),
               ],
             ),
-            SizedBox(height: 16 * scaleW),
-
-            // 5. DESKRIPSI
-            _buildLabel("Deskripsi", scaleW),
-            _buildTextField(
-              controller: _descController,
-              hintText: "Jelaskan kondisi barang, kelengkapan, garansi, atau tempat yang cocok untuk COD...",
-              maxLines: 4,
-              scaleW: scaleW,
-            ),
-            SizedBox(height: 30 * scaleW),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildLabel(String text, double scaleW) {
+  Widget _buildLabel(String text) {
     return Padding(
-      padding: EdgeInsets.only(bottom: 8 * scaleW),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         text,
-        style: TextStyle(
-          fontSize: 14 * scaleW,
+        style: const TextStyle(
+          fontSize: 14,
           fontWeight: FontWeight.bold,
-          color: const Color(0xFF8F8F8F),
+          color: Color(0xFF8F8F8F),
           fontFamily: "Roboto",
         ),
       ),
@@ -428,7 +460,6 @@ class _ProductFormPageState extends State<ProductFormPage> {
   Widget _buildTextField({
     required TextEditingController controller,
     required String hintText,
-    required double scaleW,
     int maxLines = 1,
     TextInputType keyboardType = TextInputType.text,
     List<TextInputFormatter>? inputFormatters,
@@ -436,27 +467,30 @@ class _ProductFormPageState extends State<ProductFormPage> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(10 * scaleW),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: Colors.black.withValues(alpha: 0.05),
+        ),
       ),
       child: TextField(
         controller: controller,
         maxLines: maxLines,
         keyboardType: keyboardType,
         inputFormatters: inputFormatters,
-        style: TextStyle(
+        style: const TextStyle(
           color: MpusTheme.textDarkColor,
-          fontSize: 14 * scaleW,
+          fontSize: 14,
           fontFamily: "Roboto",
         ),
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: TextStyle(
+          hintStyle: const TextStyle(
             color: MpusTheme.textSecondaryColor,
-            fontSize: 13 * scaleW,
+            fontSize: 13,
             fontFamily: "Roboto",
           ),
           border: InputBorder.none,
-          contentPadding: EdgeInsets.all(14 * scaleW),
+          contentPadding: const EdgeInsets.all(14),
         ),
       ),
     );

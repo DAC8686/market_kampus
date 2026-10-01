@@ -288,7 +288,8 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  void _showCustomMenu(BuildContext context, double scaleW) {
+  void _showCustomMenu(BuildContext context) {
+    final statusBarHeight = MediaQuery.of(context).padding.top;
     showDialog(
       context: context,
       barrierColor: Colors.transparent,
@@ -296,10 +297,10 @@ class _ProfilePageState extends State<ProfilePage> {
         return Stack(
           children: [
             Positioned(
-              top: 36 * scaleW,
-              right: 16 * scaleW,
+              top: statusBarHeight + 10,
+              right: 16,
               child: Container(
-                width: 230 * scaleW,
+                width: 230,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: const [
@@ -322,9 +323,16 @@ class _ProfilePageState extends State<ProfilePage> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Pengaturan Akun', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13 * scaleW, color: MpusTheme.textDarkColor)),
+                            Text(
+                              'Pengaturan Akun',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: MpusTheme.textDarkColor,
+                              ),
+                            ),
                             IconButton(
-                              icon: Icon(Icons.close, size: 20 * scaleW, color: Colors.grey),
+                              icon: const Icon(Icons.close, size: 20, color: Colors.grey),
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
                               onPressed: () => Navigator.pop(context),
@@ -335,7 +343,13 @@ class _ProfilePageState extends State<ProfilePage> {
                       const Divider(height: 1, color: Color(0xFFE5E5E5)),
                       ListTile(
                         leading: const Icon(Icons.qr_code_2_rounded, color: MpusTheme.tealDark, size: 20),
-                        title: Text('QRIS & E-Wallet Toko', style: GoogleFonts.plusJakartaSans(fontSize: 13 * scaleW, color: MpusTheme.textDarkColor)),
+                        title: Text(
+                          'QRIS & E-Wallet Toko',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            color: MpusTheme.textDarkColor,
+                          ),
+                        ),
                         onTap: () {
                           Navigator.pop(context);
                           _showQrisSettingsDialog();
@@ -344,7 +358,13 @@ class _ProfilePageState extends State<ProfilePage> {
                       const Divider(height: 1, color: Color(0xFFE5E5E5)),
                       ListTile(
                         leading: const Icon(Icons.phone_outlined, color: MpusTheme.tealDark, size: 20),
-                        title: Text('Ganti No. WhatsApp', style: GoogleFonts.plusJakartaSans(fontSize: 13 * scaleW, color: MpusTheme.textDarkColor)),
+                        title: Text(
+                          'Ganti No. WhatsApp',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            color: MpusTheme.textDarkColor,
+                          ),
+                        ),
                         onTap: () async {
                           Navigator.pop(context);
                           await Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangePhonePage()));
@@ -354,7 +374,13 @@ class _ProfilePageState extends State<ProfilePage> {
                       const Divider(height: 1, color: Color(0xFFE5E5E5)),
                       ListTile(
                         leading: const Icon(Icons.lock_outline, color: MpusTheme.tealDark, size: 20),
-                        title: Text('Ganti Kata Sandi', style: GoogleFonts.plusJakartaSans(fontSize: 13 * scaleW, color: MpusTheme.textDarkColor)),
+                        title: Text(
+                          'Ganti Kata Sandi',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            color: MpusTheme.textDarkColor,
+                          ),
+                        ),
                         onTap: () {
                           Navigator.pop(context);
                           Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangePasswordPage()));
@@ -363,7 +389,14 @@ class _ProfilePageState extends State<ProfilePage> {
                       const Divider(height: 1, color: Color(0xFFE5E5E5)),
                       ListTile(
                         leading: const Icon(Icons.logout, color: Colors.red, size: 20),
-                        title: Text('Keluar Akun', style: GoogleFonts.plusJakartaSans(fontSize: 13 * scaleW, color: Colors.red, fontWeight: FontWeight.bold)),
+                        title: Text(
+                          'Keluar Akun',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         onTap: () {
                           Navigator.pop(context);
                           _signOut();
@@ -440,8 +473,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
-    double scaleW = screenWidth / 412;
     double statusBarHeight = MediaQuery.of(context).padding.top;
 
     final avatarUrl = _userProfile?['avatar_url'] as String?;
@@ -467,15 +498,15 @@ class _ProfilePageState extends State<ProfilePage> {
                   stops: [0.0, 0.5, 1.0],
                 ),
               ),
-              padding: EdgeInsets.only(top: statusBarHeight + 10 * scaleW, bottom: 16 * scaleW),
+              padding: EdgeInsets.only(top: statusBarHeight + 10, bottom: 16),
               child: Stack(
                 children: [
                   Positioned(
-                    right: 16 * scaleW,
+                    right: 16,
                     top: 0,
                     child: IconButton(
-                      icon: Icon(Icons.more_horiz_rounded, size: 28 * scaleW, color: MpusTheme.textDarkColor),
-                      onPressed: () => _showCustomMenu(context, scaleW),
+                      icon: const Icon(Icons.more_horiz_rounded, size: 28, color: MpusTheme.textDarkColor),
+                      onPressed: () => _showCustomMenu(context),
                     ),
                   ),
 
@@ -495,8 +526,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                   alignment: Alignment.center,
                                   children: [
                                     Container(
-                                      width: 82 * scaleW,
-                                      height: 82 * scaleW,
+                                      width: 82,
+                                      height: 82,
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
                                         color: const Color(0xFFE5E5E5),
@@ -509,7 +540,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                             : null,
                                       ),
                                       child: (avatarUrl == null || avatarUrl.isEmpty) && !_isUploadingImage
-                                          ? Icon(Icons.person, color: Colors.grey, size: 42 * scaleW)
+                                          ? const Icon(Icons.person, color: Colors.grey, size: 42)
                                           : null,
                                     ),
                                     if (_isUploadingImage)
@@ -534,56 +565,56 @@ class _ProfilePageState extends State<ProfilePage> {
                                             color: MpusTheme.tealDark,
                                             shape: BoxShape.circle,
                                           ),
-                                          child: Icon(Icons.camera_alt, size: 14 * scaleW, color: Colors.white),
+                                          child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
                                         ),
                                       ),
                                   ],
                                 ),
                               ),
-                              SizedBox(height: 10 * scaleW),
+                              const SizedBox(height: 10),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.star_rounded, color: Colors.amber, size: 20 * scaleW),
-                                  SizedBox(width: 4 * scaleW),
+                                  const Icon(Icons.star_rounded, color: Colors.amber, size: 20),
+                                  const SizedBox(width: 4),
                                   Text(
                                     _getRatingText(_userProfile),
                                     style: GoogleFonts.plusJakartaSans(
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 14 * scaleW,
+                                      fontSize: 14,
                                       color: MpusTheme.textDarkColor,
                                     ),
                                   ),
                                 ],
                               ),
-                              SizedBox(height: 4 * scaleW),
+                              const SizedBox(height: 4),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
                                     username,
                                     style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 18 * scaleW,
+                                      fontSize: 18,
                                       fontWeight: FontWeight.bold,
                                       color: MpusTheme.textDarkColor,
                                     ),
                                   ),
                                   if (_userProfile?['is_ktm_verified'] == true) ...[
-                                    SizedBox(width: 4 * scaleW),
+                                    const SizedBox(width: 4),
                                     const Icon(Icons.verified, color: Color(0xFF00838F), size: 18),
                                   ],
                                 ],
                               ),
-                              SizedBox(height: 4 * scaleW),
+                              const SizedBox(height: 4),
                               Container(
-                                padding: EdgeInsets.symmetric(horizontal: 10 * scaleW, vertical: 3 * scaleW),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                                 decoration: BoxDecoration(
                                   color: (_userProfile?['is_ktm_verified'] == true)
                                       ? Colors.green.withValues(alpha: 0.15)
                                       : (_userProfile?['ktm_image_url'] != null && _userProfile!['ktm_image_url'].toString().isNotEmpty)
                                           ? Colors.orange.withValues(alpha: 0.15)
                                           : Colors.red.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(12 * scaleW),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
                                   (_userProfile?['is_ktm_verified'] == true)
@@ -592,7 +623,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                           ? "⏳ KTM Dalam Peninjauan"
                                           : "⚠️ Belum Verifikasi KTM",
                                   style: TextStyle(
-                                    fontSize: 11 * scaleW,
+                                    fontSize: 11,
                                     fontWeight: FontWeight.bold,
                                     color: (_userProfile?['is_ktm_verified'] == true)
                                         ? Colors.green.shade800
@@ -602,12 +633,12 @@ class _ProfilePageState extends State<ProfilePage> {
                                   ),
                                 ),
                               ),
-                              SizedBox(height: 4 * scaleW),
+                              const SizedBox(height: 4),
                               Text(
                                 '$campus • $phone',
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.roboto(
-                                  fontSize: 13 * scaleW,
+                                  fontSize: 13,
                                   color: const Color(0xFF8F8F8F),
                                 ),
                               ),
@@ -625,8 +656,8 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               child: Row(
                 children: [
-                  _buildTab("Barang Saya", 0, scaleW),
-                  _buildTab("Pesanan COD", 1, scaleW),
+                  _buildTab("Barang Saya", 0),
+                  _buildTab("Pesanan COD", 1),
                 ],
               ),
             ),
@@ -636,8 +667,8 @@ class _ProfilePageState extends State<ProfilePage> {
               child: Container(
                 color: MpusTheme.backgroundColor,
                 child: _selectedTab == 0
-                    ? _buildBarangSayaGrid(scaleW)
-                    : _buildPesananSayaList(scaleW),
+                    ? _buildBarangSayaGrid()
+                    : _buildPesananSayaList(),
               ),
             ),
           ],
@@ -646,8 +677,8 @@ class _ProfilePageState extends State<ProfilePage> {
         // FAB Add Product
         if (_selectedTab == 0)
           Positioned(
-            bottom: 20 * scaleW,
-            right: 20 * scaleW,
+            bottom: 20,
+            right: 20,
             child: FloatingActionButton(
               onPressed: () async {
                 await Navigator.push(
@@ -665,24 +696,24 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildTab(String title, int index, double scaleW) {
+  Widget _buildTab(String title, int index) {
     bool isActive = _selectedTab == index;
     return Expanded(
       child: GestureDetector(
         onTap: () => setState(() => _selectedTab = index),
         child: Container(
-          padding: EdgeInsets.symmetric(vertical: 14 * scaleW),
+          padding: const EdgeInsets.symmetric(vertical: 14),
           decoration: BoxDecoration(
             color: isActive ? MpusTheme.backgroundColor : const Color(0xFFE0E0E0),
             borderRadius: isActive
-                ? BorderRadius.vertical(top: Radius.circular(16 * scaleW))
+                ? const BorderRadius.vertical(top: Radius.circular(16))
                 : BorderRadius.zero,
           ),
           alignment: Alignment.center,
           child: Text(
             title,
             style: GoogleFonts.plusJakartaSans(
-              fontSize: 15 * scaleW,
+              fontSize: 15,
               fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
               color: isActive ? MpusTheme.textDarkColor : const Color(0xFF8F8F8F),
             ),
@@ -692,7 +723,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildBarangSayaGrid(double scaleW) {
+  Widget _buildBarangSayaGrid() {
     final uid = SupabaseConfig.currentUserId;
     if (uid == null) {
       return const Center(child: Text("Silakan login"));
@@ -714,7 +745,7 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.inventory_2_outlined, size: 64 * scaleW, color: Colors.grey.shade400),
+                Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey.shade400),
                 const SizedBox(height: 12),
                 Text(
                   "Anda belum mengunggah barang",
@@ -739,11 +770,11 @@ class _ProfilePageState extends State<ProfilePage> {
         }
 
         return GridView.builder(
-          padding: EdgeInsets.all(16 * scaleW),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          padding: const EdgeInsets.all(14),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
-            crossAxisSpacing: 14 * scaleW,
-            mainAxisSpacing: 14 * scaleW,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
             childAspectRatio: 0.74,
           ),
           itemCount: products.length,
@@ -772,7 +803,10 @@ class _ProfilePageState extends State<ProfilePage> {
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(16 * scaleW),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: Colors.black.withValues(alpha: 0.05),
+                  ),
                   boxShadow: [
                     BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2))
                   ],
@@ -783,20 +817,28 @@ class _ProfilePageState extends State<ProfilePage> {
                     Stack(
                       children: [
                         ClipRRect(
-                          borderRadius: BorderRadius.vertical(top: Radius.circular(16 * scaleW)),
-                          child: Container(
-                            height: 125 * scaleW,
-                            width: double.infinity,
-                            color: const Color(0xFFE5E5E5),
-                            child: firstImage != null
-                                ? Image.network(firstImage, fit: BoxFit.cover)
-                                : Icon(Icons.image_outlined, size: 48 * scaleW, color: Colors.grey),
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                          child: AspectRatio(
+                            aspectRatio: 1.15,
+                            child: Container(
+                              color: const Color(0xFFF0F4F4),
+                              child: firstImage != null
+                                  ? Image.network(
+                                      firstImage,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (ctx, err, stack) => const Icon(
+                                        Icons.image_not_supported_outlined,
+                                        color: Colors.grey,
+                                      ),
+                                    )
+                                  : const Icon(Icons.image_outlined, size: 44, color: Colors.grey),
+                            ),
                           ),
                         ),
                         if (isSold)
                           Positioned.fill(
                             child: ClipRRect(
-                              borderRadius: BorderRadius.vertical(top: Radius.circular(16 * scaleW)),
+                              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
                               child: Container(
                                 color: Colors.black.withValues(alpha: 0.5),
                                 alignment: Alignment.center,
@@ -819,7 +861,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
                     Expanded(
                       child: Padding(
-                        padding: EdgeInsets.all(10 * scaleW),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -828,7 +870,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 13 * scaleW,
+                                fontSize: 13,
                                 fontWeight: FontWeight.bold,
                                 color: MpusTheme.textDarkColor,
                               ),
@@ -842,14 +884,14 @@ class _ProfilePageState extends State<ProfilePage> {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 14 * scaleW,
+                                      fontSize: 14,
                                       fontWeight: FontWeight.bold,
                                       color: MpusTheme.tealDark,
                                     ),
                                   ),
                                 ),
                                 PopupMenuButton<String>(
-                                  icon: Icon(Icons.more_vert, size: 18 * scaleW, color: Colors.grey),
+                                  icon: const Icon(Icons.more_vert, size: 18, color: Colors.grey),
                                   padding: EdgeInsets.zero,
                                   onSelected: (value) async {
                                     if (value == 'edit') {
@@ -886,7 +928,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                       child: Row(
                                         children: [
                                           Icon(isSold ? Icons.check_circle_outline : Icons.sell_outlined, size: 18, color: Colors.black87),
-                                          const SizedBox(width: 8),
+                                          SizedBox(width: 8),
                                           Text(isSold ? 'Tandai Tersedia' : 'Tandai Terjual'),
                                         ],
                                       ),
@@ -919,7 +961,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildPesananSayaList(double scaleW) {
+  Widget _buildPesananSayaList() {
     final uid = SupabaseConfig.currentUserId;
     if (uid == null) {
       return const Center(child: Text("Silakan login"));
@@ -941,7 +983,7 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.shopping_bag_outlined, size: 64 * scaleW, color: Colors.grey.shade400),
+                Icon(Icons.shopping_bag_outlined, size: 64, color: Colors.grey.shade400),
                 const SizedBox(height: 12),
                 Text("Belum ada riwayat pesanan COD", style: GoogleFonts.plusJakartaSans(color: Colors.grey, fontSize: 14)),
               ],
@@ -950,7 +992,7 @@ class _ProfilePageState extends State<ProfilePage> {
         }
 
         return ListView.builder(
-          padding: EdgeInsets.all(16 * scaleW),
+          padding: const EdgeInsets.all(14),
           itemCount: orders.length,
           itemBuilder: (context, index) {
             final order = orders[index];
@@ -984,21 +1026,24 @@ class _ProfilePageState extends State<ProfilePage> {
             }
 
             return Container(
-              margin: EdgeInsets.only(bottom: 12 * scaleW),
+              margin: const EdgeInsets.only(bottom: 12),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16 * scaleW),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: Colors.black.withValues(alpha: 0.05),
+                ),
                 boxShadow: [
                   BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2))
                 ],
               ),
               child: ListTile(
-                contentPadding: EdgeInsets.all(12 * scaleW),
+                contentPadding: const EdgeInsets.all(12),
                 leading: ClipRRect(
-                  borderRadius: BorderRadius.circular(10 * scaleW),
+                  borderRadius: BorderRadius.circular(10),
                   child: Container(
-                    width: 54 * scaleW,
-                    height: 54 * scaleW,
+                    width: 54,
+                    height: 54,
                     color: const Color(0xFFE5E5E5),
                     child: firstImage != null
                         ? Image.network(firstImage, fit: BoxFit.cover)
@@ -1009,7 +1054,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   product?['name']?.toString() ?? 'Produk Mpus',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 14 * scaleW),
+                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 14),
                 ),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1017,7 +1062,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     const SizedBox(height: 4),
                     Text(
                       _formatPrice(order['total_price']),
-                      style: GoogleFonts.plusJakartaSans(color: MpusTheme.tealDark, fontWeight: FontWeight.bold, fontSize: 13 * scaleW),
+                      style: GoogleFonts.plusJakartaSans(color: MpusTheme.tealDark, fontWeight: FontWeight.bold, fontSize: 13),
                     ),
                     const SizedBox(height: 4),
                     Row(

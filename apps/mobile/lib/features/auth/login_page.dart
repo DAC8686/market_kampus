@@ -6,7 +6,6 @@ import '../../data/services/auth_service.dart';
 import '../../data/services/profile_service.dart';
 import '../../data/services/firebase_notification_service.dart';
 import '../catalog/home_page.dart';
-import 'complete_profile_page.dart';
 import 'register_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -31,22 +30,12 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  Future<void> _handlePostLoginNavigation(String userId) async {
-    final isComplete = await _profileService.isProfileComplete(userId);
-
+  void _handlePostLoginNavigation() {
     if (!mounted) return;
-
-    if (isComplete) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomePage()),
-      );
-    } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const CompleteProfilePage()),
-      );
-    }
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const HomePage()),
+    );
   }
 
   Future<void> _signIn() async {
@@ -84,7 +73,7 @@ class _LoginPageState extends State<LoginPage> {
       await FirebaseNotificationService().syncTokenToProfile();
 
       if (response.user != null) {
-        await _handlePostLoginNavigation(response.user!.id);
+        _handlePostLoginNavigation();
       }
     } catch (e) {
       if (!mounted) return;
@@ -113,30 +102,35 @@ class _LoginPageState extends State<LoginPage> {
         final isRegistered = phone.isNotEmpty || nim.isNotEmpty || ktmUrl.isNotEmpty;
 
         if (!isRegistered) {
-          // Akun belum terdaftar -> Batalkan sesi login & arahkan ke registrasi
+          // Akun belum terdaftar -> Batalkan sesi login sementara & arahkan langsung ke registrasi
+          final googleEmail = user.email;
+          final googleName = user.userMetadata?['name']?.toString() ??
+              user.userMetadata?['full_name']?.toString();
+
           await _authService.signOut();
           if (!mounted) return;
+
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text("Akun Google Anda belum terdaftar di Mpus. Silakan daftar terlebih dahulu."),
-              action: SnackBarAction(
-                label: "Daftar",
-                textColor: MpusTheme.accentBlue,
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const RegisterPage()),
-                  );
-                },
+            const SnackBar(
+              content: Text("Akun Google belum terdaftar di MPUS. Silakan lengkapi pendaftaran mahasiswa."),
+            ),
+          );
+
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => RegisterPage(
+                initialEmail: googleEmail,
+                initialName: googleName,
               ),
             ),
           );
           return;
         }
 
-        // Akun sudah terdaftar -> Sinkronkan token & navigasi
+        // Akun sudah terdaftar -> Sinkronkan token & navigasi ke Beranda
         await FirebaseNotificationService().syncTokenToProfile();
-        await _handlePostLoginNavigation(user.id);
+        _handlePostLoginNavigation();
       }
     } catch (e) {
       if (!mounted) return;
@@ -150,248 +144,243 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
-    double scaleW = screenWidth / 412;
-
     return Scaffold(
       backgroundColor: MpusTheme.primaryColor,
-      body: SingleChildScrollView(
-        child: SizedBox(
-          height: 920 * scaleW,
-          width: double.infinity,
-          child: Stack(
-            children: [
-              Positioned(
-                left: 157 * scaleW,
-                top: 400 * scaleW,
-                child: SvgPicture.asset(
-                  'assets/LogoMpus.svg',
-                  width: 98 * scaleW,
-                  height: 119 * scaleW,
-                  colorFilter: const ColorFilter.mode(
-                    MpusTheme.textSecondaryColor,
-                    BlendMode.srcIn,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 380),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  SvgPicture.asset(
+                    'assets/LogoMpus.svg',
+                    width: 98,
+                    height: 119,
+                    colorFilter: const ColorFilter.mode(
+                      MpusTheme.textSecondaryColor,
+                      BlendMode.srcIn,
+                    ),
                   ),
-                ),
-              ),
-
-              Positioned(
-                left: 38 * scaleW,
-                top: 200 * scaleW,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24 * scaleW),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                    child: Container(
-                      width: 336 * scaleW,
-                      height: 420 * scaleW,
-                      padding: EdgeInsets.only(
-                        top: 10 * scaleW,
-                        left: 25 * scaleW,
-                        right: 25 * scaleW,
-                        bottom: 10 * scaleW,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFD9D9D9).withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(24 * scaleW),
-                        border: Border.all(
-                          color: const Color(0xFFD9D9D9).withValues(alpha: 0.3),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 28,
+                          vertical: 30,
                         ),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            "Masuk",
-                            style: TextStyle(
-                              fontSize: 36 * scaleW,
-                              fontFamily: "Roboto",
-                              fontWeight: FontWeight.w700,
-                              color: MpusTheme.textSecondaryColor,
-                            ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD9D9D9).withValues(alpha: 0.25),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: const Color(0xFFD9D9D9).withValues(alpha: 0.35),
                           ),
-
-                          SizedBox(height: 25 * scaleW),
-                          SizedBox(
-                            width: 250 * scaleW,
-                            height: 38 * scaleW,
-                            child: TextField(
-                              controller: _nimController,
-                              keyboardType: TextInputType.number,
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              "Masuk",
                               style: TextStyle(
-                                color: MpusTheme.textPrimaryColor,
-                                fontSize: 14 * scaleW,
+                                fontSize: 32,
                                 fontFamily: "Roboto",
-                              ),
-                              textAlignVertical: TextAlignVertical.center,
-                              decoration: InputDecoration(
-                                isDense: true,
-                                labelText: 'NIM',
-                                floatingLabelBehavior: FloatingLabelBehavior.auto,
-                                floatingLabelStyle: TextStyle(
-                                  color: const Color(0xFF8F8F8F),
-                                  fontSize: 14 * scaleW,
-                                  fontFamily: "Roboto",
-                                ),
-                                labelStyle: TextStyle(
-                                  color: MpusTheme.textSecondaryColor,
-                                  fontSize: 14 * scaleW,
-                                  fontFamily: "Roboto",
-                                ),
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 18 * scaleW,
-                                  vertical: 8 * scaleW,
-                                ),
-                                filled: true,
-                                fillColor: Colors.white,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(25 * scaleW),
-                                  borderSide: BorderSide.none,
-                                ),
+                                fontWeight: FontWeight.w700,
+                                color: MpusTheme.textSecondaryColor,
                               ),
                             ),
-                          ),
-                          SizedBox(height: 16 * scaleW),
-                          SizedBox(
-                            width: 250 * scaleW,
-                            height: 38 * scaleW,
-                            child: TextField(
-                              controller: _passwordController,
-                              obscureText: true,
-                              style: TextStyle(
-                                color: MpusTheme.textPrimaryColor,
-                                fontSize: 14 * scaleW,
-                                fontFamily: "Roboto",
-                              ),
-                              textAlignVertical: TextAlignVertical.center,
-                              decoration: InputDecoration(
-                                labelText: 'Password',
-                                floatingLabelBehavior: FloatingLabelBehavior.auto,
-                                floatingLabelStyle: TextStyle(
-                                  color: const Color(0xFF8F8F8F),
-                                  fontSize: 14 * scaleW,
-                                  fontFamily: "Roboto",
-                                ),
-                                labelStyle: TextStyle(
-                                  color: MpusTheme.textSecondaryColor,
-                                  fontSize: 14 * scaleW,
-                                  fontFamily: "Roboto",
-                                ),
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 18 * scaleW,
-                                  vertical: 8 * scaleW,
-                                ),
-                                filled: true,
-                                fillColor: Colors.white,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(25 * scaleW),
-                                  borderSide: BorderSide.none,
-                                ),
-                              ),
-                            ),
-                          ),
-                          SizedBox(height: 24 * scaleW),
-                          SizedBox(
-                            width: 140 * scaleW,
-                            height: 35 * scaleW,
-                            child: ElevatedButton(
-                              onPressed: _isLoading ? null : _signIn,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFD9D9D9),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(30 * scaleW),
-                                ),
-                              ),
-                              child: _isLoading
-                                  ? const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF8F8F8F)),
-                                    )
-                                  : Text(
-                                      "MASUK",
-                                      style: TextStyle(
-                                        color: const Color(0xFF8F8F8F),
-                                        fontSize: 16 * scaleW,
-                                        fontFamily: "Roboto",
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                          SizedBox(height: 14 * scaleW),
+                            const SizedBox(height: 24),
 
-                          // Tombol Pintas Google Sign-In
-                          SizedBox(
-                            width: 250 * scaleW,
-                            height: 36 * scaleW,
-                            child: OutlinedButton.icon(
-                              onPressed: _isGoogleLoading ? null : _signInWithGoogle,
-                              style: OutlinedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                side: const BorderSide(color: Color(0xFFE0E0E0)),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(25 * scaleW),
-                                ),
-                              ),
-                              icon: _isGoogleLoading
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
-                                    )
-                                  : const Icon(Icons.g_mobiledata_rounded, color: Color(0xFFEA4335), size: 24),
-                              label: Text(
-                                "Masuk dengan Google",
-                                style: TextStyle(
+                            // Field NIM
+                            SizedBox(
+                              height: 44,
+                              child: TextField(
+                                controller: _nimController,
+                                keyboardType: TextInputType.number,
+                                style: const TextStyle(
                                   color: MpusTheme.textPrimaryColor,
-                                  fontSize: 13 * scaleW,
-                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
                                   fontFamily: "Roboto",
                                 ),
-                              ),
-                            ),
-                          ),
-
-                          SizedBox(height: 14 * scaleW),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                "Belum memiliki akun? ",
-                                style: TextStyle(
-                                  color: MpusTheme.textSecondaryColor,
-                                  fontFamily: "Roboto",
-                                  fontSize: 14 * scaleW,
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const RegisterPage(),
-                                    ),
-                                  );
-                                },
-                                child: Text(
-                                  "Daftar",
-                                  style: TextStyle(
+                                textAlignVertical: TextAlignVertical.center,
+                                decoration: InputDecoration(
+                                  isDense: true,
+                                  labelText: 'NIM',
+                                  floatingLabelBehavior: FloatingLabelBehavior.auto,
+                                  floatingLabelStyle: const TextStyle(
+                                    color: Color(0xFF8F8F8F),
+                                    fontSize: 14,
                                     fontFamily: "Roboto",
-                                    color: MpusTheme.accentBlue,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14 * scaleW,
+                                  ),
+                                  labelStyle: const TextStyle(
+                                    color: MpusTheme.textSecondaryColor,
+                                    fontSize: 14,
+                                    fontFamily: "Roboto",
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 18,
+                                    vertical: 10,
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(22),
+                                    borderSide: BorderSide.none,
                                   ),
                                 ),
                               ),
-                            ],
-                          ),
-                        ],
+                            ),
+                            const SizedBox(height: 14),
+
+                            // Field Password
+                            SizedBox(
+                              height: 44,
+                              child: TextField(
+                                controller: _passwordController,
+                                obscureText: true,
+                                style: const TextStyle(
+                                  color: MpusTheme.textPrimaryColor,
+                                  fontSize: 14,
+                                  fontFamily: "Roboto",
+                                ),
+                                textAlignVertical: TextAlignVertical.center,
+                                decoration: InputDecoration(
+                                  labelText: 'Password',
+                                  floatingLabelBehavior: FloatingLabelBehavior.auto,
+                                  floatingLabelStyle: const TextStyle(
+                                    color: Color(0xFF8F8F8F),
+                                    fontSize: 14,
+                                    fontFamily: "Roboto",
+                                  ),
+                                  labelStyle: const TextStyle(
+                                    color: MpusTheme.textSecondaryColor,
+                                    fontSize: 14,
+                                    fontFamily: "Roboto",
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 18,
+                                    vertical: 10,
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(22),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+
+                            // Tombol Masuk
+                            SizedBox(
+                              width: 150,
+                              height: 40,
+                              child: ElevatedButton(
+                                onPressed: _isLoading ? null : _signIn,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFD9D9D9),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                ),
+                                child: _isLoading
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF8F8F8F)),
+                                      )
+                                    : const Text(
+                                        "MASUK",
+                                        style: TextStyle(
+                                          color: Color(0xFF8F8F8F),
+                                          fontSize: 15,
+                                          fontFamily: "Roboto",
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+
+                            // Tombol Pintas Google Sign-In
+                            SizedBox(
+                              width: double.infinity,
+                              height: 40,
+                              child: OutlinedButton.icon(
+                                onPressed: _isGoogleLoading ? null : _signInWithGoogle,
+                                style: OutlinedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  side: const BorderSide(color: Color(0xFFE0E0E0)),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                ),
+                                icon: _isGoogleLoading
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      )
+                                    : const Icon(Icons.g_mobiledata_rounded, color: Color(0xFFEA4335), size: 24),
+                                label: const Text(
+                                  "Masuk dengan Google",
+                                  style: TextStyle(
+                                    color: MpusTheme.textPrimaryColor,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    fontFamily: "Roboto",
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Text(
+                                  "Belum memiliki akun? ",
+                                  style: TextStyle(
+                                    color: MpusTheme.textSecondaryColor,
+                                    fontFamily: "Roboto",
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const RegisterPage(),
+                                      ),
+                                    );
+                                  },
+                                  child: const Text(
+                                    "Daftar",
+                                    style: TextStyle(
+                                      fontFamily: "Roboto",
+                                      color: MpusTheme.accentBlue,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

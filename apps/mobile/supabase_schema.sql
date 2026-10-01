@@ -1,7 +1,8 @@
 -- ==============================================================================
--- 🛒 APPS MPUS (MARKET KAMPUS) — SUPABASE MASTER DATABASE SCHEMA
+-- 🛒 APPS MPUS (MARKET KAMPUS) — SUPABASE MASTER DATABASE SCHEMA (SECURE V2)
 -- Author: Dimas Adhi C. (Tech Lead DACZDev)
--- Model: Local Campus Marketplace (COD & Direct QRIS/E-Wallet System)
+-- Model: Local Campus Marketplace (COD, Direct QRIS, AI KTM Verification Guard)
+-- Idempotent & Safe to Re-run
 -- ==============================================================================
 
 -- 1. EXTENSIONS
@@ -13,9 +14,13 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     email TEXT,
+    nim TEXT,
     name TEXT NOT NULL DEFAULT 'Pengguna Mpus',
     phone TEXT DEFAULT '',
     avatar_url TEXT DEFAULT '',
+    ktm_image_url TEXT DEFAULT '',
+    is_ktm_verified BOOLEAN DEFAULT FALSE,
+    verification_status TEXT NOT NULL DEFAULT 'UNVERIFIED' CHECK (verification_status IN ('UNVERIFIED', 'PENDING_REVIEW', 'VERIFIED', 'REJECTED')),
     qris_image_url TEXT DEFAULT '',
     ewallet_name TEXT DEFAULT 'DANA / GoPay / OVO',
     ewallet_number TEXT DEFAULT '',
@@ -27,15 +32,24 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Pastikan kolom baru otomatis terpasang pada database yang sudah dibuat sebelumnya
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS nim TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS verification_status TEXT DEFAULT 'UNVERIFIED';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS campus_name TEXT DEFAULT 'Kampus';
+
 -- RLS: Profiles
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profiles;
 CREATE POLICY "Public profiles are viewable by everyone" 
 ON public.profiles FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Users can insert their own profile" ON public.profiles;
 CREATE POLICY "Users can insert their own profile" 
 ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
 CREATE POLICY "Users can update their own profile" 
 ON public.profiles FOR UPDATE USING (auth.uid() = id);
 
@@ -43,14 +57,18 @@ ON public.profiles FOR UPDATE USING (auth.uid() = id);
 CREATE OR REPLACE FUNCTION public.handle_new_user() 
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, name, phone, avatar_url)
+  INSERT INTO public.profiles (id, email, name, phone, avatar_url, nim)
   VALUES (
     new.id,
     new.email,
     COALESCE(new.raw_user_meta_data->>'name', 'Pengguna Mpus'),
     COALESCE(new.raw_user_meta_data->>'phone', ''),
-    COALESCE(new.raw_user_meta_data->>'avatar_url', '')
-  );
+    COALESCE(new.raw_user_meta_data->>'avatar_url', ''),
+    COALESCE(new.raw_user_meta_data->>'nim', NULL)
+  )
+  ON CONFLICT (id) DO UPDATE 
+  SET email = EXCLUDED.email,
+      name = COALESCE(EXCLUDED.name, public.profiles.name);
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -82,15 +100,19 @@ CREATE TABLE IF NOT EXISTS public.products (
 -- RLS: Products
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Products are viewable by everyone" ON public.products;
 CREATE POLICY "Products are viewable by everyone" 
 ON public.products FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Authenticated users can insert products" ON public.products;
 CREATE POLICY "Authenticated users can insert products" 
 ON public.products FOR INSERT WITH CHECK (auth.uid() = seller_id);
 
+DROP POLICY IF EXISTS "Sellers can update their own products" ON public.products;
 CREATE POLICY "Sellers can update their own products" 
 ON public.products FOR UPDATE USING (auth.uid() = seller_id);
 
+DROP POLICY IF EXISTS "Sellers can delete their own products" ON public.products;
 CREATE POLICY "Sellers can delete their own products" 
 ON public.products FOR DELETE USING (auth.uid() = seller_id);
 
@@ -115,13 +137,16 @@ CREATE TABLE IF NOT EXISTS public.orders (
 -- RLS: Orders
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view orders they are involved in" ON public.orders;
 CREATE POLICY "Users can view orders they are involved in" 
 ON public.orders FOR SELECT 
 USING (auth.uid() = buyer_id OR auth.uid() = seller_id);
 
+DROP POLICY IF EXISTS "Buyers can create orders" ON public.orders;
 CREATE POLICY "Buyers can create orders" 
 ON public.orders FOR INSERT WITH CHECK (auth.uid() = buyer_id);
 
+DROP POLICY IF EXISTS "Involved parties can update orders" ON public.orders;
 CREATE POLICY "Involved parties can update orders" 
 ON public.orders FOR UPDATE 
 USING (auth.uid() = buyer_id OR auth.uid() = seller_id);
@@ -143,9 +168,11 @@ CREATE TABLE IF NOT EXISTS public.reviews (
 -- RLS: Reviews
 ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Reviews are viewable by everyone" ON public.reviews;
 CREATE POLICY "Reviews are viewable by everyone" 
 ON public.reviews FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Buyers can write reviews" ON public.reviews;
 CREATE POLICY "Buyers can write reviews" 
 ON public.reviews FOR INSERT WITH CHECK (auth.uid() = reviewer_id);
 
@@ -179,7 +206,6 @@ CREATE TRIGGER on_review_created
 -- ==============================================================================
 -- 6. STORAGE BUCKETS CONFIGURATION
 -- ==============================================================================
--- Buat bucket penyimpanan file publik
 INSERT INTO storage.buckets (id, name, public) 
 VALUES ('product-images', 'product-images', true)
 ON CONFLICT (id) DO NOTHING;
@@ -192,24 +218,43 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('qris-codes', 'qris-codes', true)
 ON CONFLICT (id) DO NOTHING;
 
--- Kebijakan Storage Security
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('ktm-documents', 'ktm-documents', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Kebijakan Storage Security (Idempotent)
+DROP POLICY IF EXISTS "Public Access Product Images" ON storage.objects;
 CREATE POLICY "Public Access Product Images" 
 ON storage.objects FOR SELECT USING (bucket_id = 'product-images');
 
+DROP POLICY IF EXISTS "Authenticated Users can upload Product Images" ON storage.objects;
 CREATE POLICY "Authenticated Users can upload Product Images" 
 ON storage.objects FOR INSERT 
 WITH CHECK (bucket_id = 'product-images' AND auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Public Access Avatars" ON storage.objects;
 CREATE POLICY "Public Access Avatars" 
 ON storage.objects FOR SELECT USING (bucket_id = 'avatars');
 
+DROP POLICY IF EXISTS "Authenticated Users can upload Avatars" ON storage.objects;
 CREATE POLICY "Authenticated Users can upload Avatars" 
 ON storage.objects FOR INSERT 
 WITH CHECK (bucket_id = 'avatars' AND auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Public Access QRIS" ON storage.objects;
 CREATE POLICY "Public Access QRIS" 
 ON storage.objects FOR SELECT USING (bucket_id = 'qris-codes');
 
+DROP POLICY IF EXISTS "Authenticated Users can upload QRIS" ON storage.objects;
 CREATE POLICY "Authenticated Users can upload QRIS" 
 ON storage.objects FOR INSERT 
 WITH CHECK (bucket_id = 'qris-codes' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Public Access KTM Documents" ON storage.objects;
+CREATE POLICY "Public Access KTM Documents" 
+ON storage.objects FOR SELECT USING (bucket_id = 'ktm-documents');
+
+DROP POLICY IF EXISTS "Authenticated Users can upload KTM Documents" ON storage.objects;
+CREATE POLICY "Authenticated Users can upload KTM Documents" 
+ON storage.objects FOR INSERT 
+WITH CHECK (bucket_id = 'ktm-documents' AND auth.role() = 'authenticated');

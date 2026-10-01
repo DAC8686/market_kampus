@@ -4,10 +4,10 @@ class AppConstants {
   static const String appTagline = 'Marketplace Kampus Terpercaya';
 
   // Microservices API Endpoints
-  // Default to 127.0.0.1:8000 (Physical Android device via adb reverse tcp:8000 tcp:8000 & desktop)
+  // Production Gateway on custom domain mpus.daczdev.id
   static const String ocrServiceBaseUrl = String.fromEnvironment(
     'OCR_SERVICE_URL',
-    defaultValue: 'http://127.0.0.1:8000',
+    defaultValue: 'https://mpus.daczdev.id',
   );
 
   // Storage Bucket Names
