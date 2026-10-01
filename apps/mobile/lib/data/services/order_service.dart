@@ -1,11 +1,14 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/supabase_config.dart';
 import '../models/order_model.dart';
+import 'gateway_api_client.dart';
 
 class OrderService {
   final SupabaseClient _client = SupabaseConfig.client;
+  final GatewayApiClient _gatewayClient = GatewayApiClient();
 
-  // Create a new COD/QRIS Order
+  // 1. Create a new COD/QRIS Order via Gateway -> Supabase Fallback
   Future<Map<String, dynamic>> createOrder({
     required String productId,
     required String buyerId,
@@ -16,7 +19,7 @@ class OrderService {
     required double totalPrice,
     String? notes,
   }) async {
-    final response = await _client.from('orders').insert({
+    final payload = {
       'product_id': productId,
       'buyer_id': buyerId,
       'seller_id': sellerId,
@@ -26,12 +29,22 @@ class OrderService {
       'cod_meeting_time': codMeetingTime.trim(),
       'total_price': totalPrice,
       'notes': notes?.trim() ?? '',
-    }).select().single();
+    };
 
+    try {
+      final response = await _gatewayClient.post('/api/v1/orders', body: payload);
+      if (response is Map<String, dynamic>) {
+        return response;
+      }
+    } catch (e) {
+      debugPrint("OrderService.createOrder Gateway fallback to Supabase: $e");
+    }
+
+    final response = await _client.from('orders').insert(payload).select().single();
     return response;
   }
 
-  // Update existing Order
+  // 2. Update existing Order
   Future<void> updateOrder({
     required String orderId,
     String? codLocation,
@@ -47,23 +60,56 @@ class OrderService {
     if (status != null) updates['status'] = status;
     if (notes != null) updates['notes'] = notes.trim();
 
+    try {
+      await _gatewayClient.put('/api/v1/orders/$orderId', body: updates);
+      return;
+    } catch (e) {
+      debugPrint("OrderService.updateOrder Gateway fallback to Supabase: $e");
+    }
+
     await _client.from('orders').update(updates).eq('id', orderId);
   }
 
-  // Update Status
+  // 3. Update Order Status
   Future<void> updateOrderStatus(String orderId, String status) async {
+    try {
+      await _gatewayClient.patch(
+        '/api/v1/orders/$orderId/status',
+        body: {'status': status},
+      );
+      return;
+    } catch (e) {
+      debugPrint("OrderService.updateOrderStatus Gateway fallback to Supabase: $e");
+    }
+
     await _client.from('orders').update({
       'status': status,
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     }).eq('id', orderId);
   }
 
-  // Get active order for specific product
+  // 4. Get active order for product
   Future<Map<String, dynamic>?> getActiveOrderForProduct({
     required String productId,
     required String userId,
     required bool isSeller,
   }) async {
+    try {
+      final response = await _gatewayClient.get(
+        '/api/v1/orders/active',
+        queryParams: {
+          'product_id': productId,
+          'user_id': userId,
+          'is_seller': isSeller,
+        },
+      );
+      if (response is Map<String, dynamic>) {
+        return response;
+      }
+    } catch (e) {
+      debugPrint("OrderService.getActiveOrderForProduct Gateway fallback to Supabase: $e");
+    }
+
     var query = _client.from('orders').select('''
       id,
       product_id,
@@ -112,8 +158,17 @@ class OrderService {
     return response;
   }
 
-  // Get single order with details by Order ID
+  // 5. Get single order by ID
   Future<Map<String, dynamic>?> getOrderById(String orderId) async {
+    try {
+      final response = await _gatewayClient.get('/api/v1/orders/$orderId');
+      if (response is Map<String, dynamic>) {
+        return response;
+      }
+    } catch (e) {
+      debugPrint("OrderService.getOrderById Gateway fallback to Supabase: $e");
+    }
+
     final response = await _client.from('orders').select('''
       id,
       product_id,
@@ -159,8 +214,22 @@ class OrderService {
     return response;
   }
 
-  // Get orders where current user is buyer (typed OrderModel)
+  // 6. Get orders where current user is buyer
   Future<List<Map<String, dynamic>>> getMyPurchases(String buyerId) async {
+    try {
+      final response = await _gatewayClient.get(
+        '/api/v1/orders/purchases',
+        queryParams: {'buyer_id': buyerId},
+      );
+      if (response is List) {
+        return List<Map<String, dynamic>>.from(
+          response.map((e) => Map<String, dynamic>.from(e as Map)),
+        );
+      }
+    } catch (e) {
+      debugPrint("OrderService.getMyPurchases Gateway fallback to Supabase: $e");
+    }
+
     final response = await _client.from('orders').select('''
       id,
       product_id,
@@ -192,14 +261,28 @@ class OrderService {
     return List<Map<String, dynamic>>.from(response);
   }
 
-  // Get typed purchases
+  // 7. Get typed purchases
   Future<List<OrderModel>> getMyPurchaseModels(String buyerId) async {
     final raw = await getMyPurchases(buyerId);
     return raw.map((e) => OrderModel.fromJson(e)).toList();
   }
 
-  // Get orders received by seller
+  // 8. Get orders received by seller
   Future<List<Map<String, dynamic>>> getMyIncomingOrders(String sellerId) async {
+    try {
+      final response = await _gatewayClient.get(
+        '/api/v1/orders/incoming',
+        queryParams: {'seller_id': sellerId},
+      );
+      if (response is List) {
+        return List<Map<String, dynamic>>.from(
+          response.map((e) => Map<String, dynamic>.from(e as Map)),
+        );
+      }
+    } catch (e) {
+      debugPrint("OrderService.getMyIncomingOrders Gateway fallback to Supabase: $e");
+    }
+
     final response = await _client.from('orders').select('''
       id,
       product_id,
@@ -231,13 +314,13 @@ class OrderService {
     return List<Map<String, dynamic>>.from(response);
   }
 
-  // Get typed incoming orders
+  // 9. Get typed incoming orders
   Future<List<OrderModel>> getMyIncomingOrderModels(String sellerId) async {
     final raw = await getMyIncomingOrders(sellerId);
     return raw.map((e) => OrderModel.fromJson(e)).toList();
   }
 
-  // Submit Rating & Review
+  // 10. Submit Rating & Review
   Future<void> submitReview({
     required String orderId,
     required String productId,
@@ -246,18 +329,33 @@ class OrderService {
     required int rating,
     String? comment,
   }) async {
-    await _client.from('reviews').insert({
+    final payload = {
       'order_id': orderId,
       'product_id': productId,
       'reviewer_id': reviewerId,
       'seller_id': sellerId,
       'rating': rating,
       'comment': comment?.trim() ?? '',
-    });
+    };
+
+    try {
+      await _gatewayClient.post('/api/v1/reviews', body: payload);
+      return;
+    } catch (e) {
+      debugPrint("OrderService.submitReview Gateway fallback to Supabase: $e");
+    }
+
+    await _client.from('reviews').insert(payload);
   }
 
-  // Delete an order history entry
+  // 11. Delete order
   Future<void> deleteOrder(String orderId) async {
+    try {
+      await _gatewayClient.delete('/api/v1/orders/$orderId');
+      return;
+    } catch (e) {
+      debugPrint("OrderService.deleteOrder Gateway fallback to Supabase: $e");
+    }
     await _client.from('orders').delete().eq('id', orderId);
   }
 }

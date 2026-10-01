@@ -1,20 +1,43 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/supabase_config.dart';
 import '../models/product_model.dart';
+import 'gateway_api_client.dart';
 import 'storage_service.dart';
 
 class ProductService {
   final SupabaseClient _client = SupabaseConfig.client;
   final StorageService _storageService = StorageService();
+  final GatewayApiClient _gatewayClient = GatewayApiClient();
 
-  // Fetch all active products with seller profile details (raw Map list)
+  // 1. Fetch active products with Gateway REST -> Supabase Fallback
   Future<List<Map<String, dynamic>>> getProducts({
     String? category,
     String? searchQuery,
     String sortBy = 'created_at',
     bool ascending = false,
   }) async {
+    try {
+      final response = await _gatewayClient.get(
+        '/api/v1/products',
+        queryParams: {
+          if (category != null && category != 'Semua' && category.isNotEmpty) 'category': category,
+          if (searchQuery != null && searchQuery.trim().isNotEmpty) 'search': searchQuery.trim(),
+          'sort_by': sortBy,
+          'ascending': ascending,
+        },
+      );
+
+      if (response is List) {
+        return List<Map<String, dynamic>>.from(
+          response.map((e) => Map<String, dynamic>.from(e as Map)),
+        );
+      }
+    } catch (e) {
+      debugPrint("ProductService.getProducts Gateway fallback to Supabase: $e");
+    }
+
     var query = _client.from('products').select('''
       id,
       seller_id,
@@ -53,7 +76,7 @@ class ProductService {
     return List<Map<String, dynamic>>.from(response);
   }
 
-  // Fetch all active products typed as ProductModel list
+  // 2. Fetch all active products as ProductModel list
   Future<List<ProductModel>> getProductModels({
     String? category,
     String? searchQuery,
@@ -69,8 +92,22 @@ class ProductService {
     return rawList.map((e) => ProductModel.fromJson(e)).toList();
   }
 
-  // Fetch seller's own products
+  // 3. Fetch seller's own products
   Future<List<Map<String, dynamic>>> getMyProducts(String sellerId) async {
+    try {
+      final response = await _gatewayClient.get(
+        '/api/v1/products',
+        queryParams: {'seller_id': sellerId},
+      );
+      if (response is List) {
+        return List<Map<String, dynamic>>.from(
+          response.map((e) => Map<String, dynamic>.from(e as Map)),
+        );
+      }
+    } catch (e) {
+      debugPrint("ProductService.getMyProducts Gateway fallback to Supabase: $e");
+    }
+
     final response = await _client
         .from('products')
         .select()
@@ -79,7 +116,7 @@ class ProductService {
     return List<Map<String, dynamic>>.from(response);
   }
 
-  // Add a new product with images
+  // 4. Add new product with images
   Future<Map<String, dynamic>> addProduct({
     required String sellerId,
     required String name,
@@ -92,14 +129,12 @@ class ProductService {
     required List<File> imageFiles,
   }) async {
     List<String> imageUrls = [];
-
-    // Upload images to Supabase Storage
     for (var file in imageFiles) {
       final url = await _storageService.uploadProductImage(file, sellerId);
       imageUrls.add(url);
     }
 
-    final response = await _client.from('products').insert({
+    final productPayload = {
       'seller_id': sellerId,
       'name': name.trim(),
       'price': price,
@@ -110,12 +145,25 @@ class ProductService {
       'is_qris_available': isQrisAvailable,
       'images': imageUrls,
       'is_sold': false,
-    }).select().single();
+    };
 
+    try {
+      final response = await _gatewayClient.post(
+        '/api/v1/products',
+        body: productPayload,
+      );
+      if (response is Map<String, dynamic>) {
+        return response;
+      }
+    } catch (e) {
+      debugPrint("ProductService.addProduct Gateway fallback to Supabase: $e");
+    }
+
+    final response = await _client.from('products').insert(productPayload).select().single();
     return response;
   }
 
-  // Update existing product
+  // 5. Update existing product
   Future<void> updateProduct({
     required String productId,
     required String name,
@@ -149,16 +197,39 @@ class ProductService {
       updateData['is_sold'] = isSold;
     }
 
+    try {
+      await _gatewayClient.put('/api/v1/products/$productId', body: updateData);
+      return;
+    } catch (e) {
+      debugPrint("ProductService.updateProduct Gateway fallback to Supabase: $e");
+    }
+
     await _client.from('products').update(updateData).eq('id', productId);
   }
 
-  // Delete product
+  // 6. Delete product
   Future<void> deleteProduct(String productId) async {
+    try {
+      await _gatewayClient.delete('/api/v1/products/$productId');
+      return;
+    } catch (e) {
+      debugPrint("ProductService.deleteProduct Gateway fallback to Supabase: $e");
+    }
     await _client.from('products').delete().eq('id', productId);
   }
 
-  // Mark product as Sold
+  // 7. Toggle product sold state
   Future<void> toggleProductSold(String productId, bool isSold) async {
+    try {
+      await _gatewayClient.patch(
+        '/api/v1/products/$productId/status',
+        body: {'is_sold': isSold},
+      );
+      return;
+    } catch (e) {
+      debugPrint("ProductService.toggleProductSold Gateway fallback to Supabase: $e");
+    }
+
     await _client.from('products').update({
       'is_sold': isSold,
       'updated_at': DateTime.now().toUtc().toIso8601String(),

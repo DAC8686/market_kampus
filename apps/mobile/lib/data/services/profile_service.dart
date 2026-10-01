@@ -3,14 +3,28 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/supabase_config.dart';
 import '../models/profile_model.dart';
+import 'gateway_api_client.dart';
 import 'storage_service.dart';
 
 class ProfileService {
   final SupabaseClient _client = SupabaseConfig.client;
   final StorageService _storageService = StorageService();
+  final GatewayApiClient _gatewayClient = GatewayApiClient();
 
-  // Get current user profile as Map
+  // 1. Get current user profile as Map (Gateway REST with Supabase Fallback)
   Future<Map<String, dynamic>?> getProfile(String userId) async {
+    try {
+      final response = await _gatewayClient.get(
+        '/api/v1/profile/me',
+        queryParams: {'user_id': userId},
+      );
+      if (response is Map<String, dynamic>) {
+        return response;
+      }
+    } catch (e) {
+      debugPrint("ProfileService.getProfile Gateway fallback to Supabase: $e");
+    }
+
     final response = await _client
         .from('profiles')
         .select()
@@ -19,25 +33,32 @@ class ProfileService {
     return response;
   }
 
-  // Get current user profile as typed ProfileModel
+  // 2. Get typed ProfileModel
   Future<ProfileModel?> getProfileModel(String userId) async {
     final data = await getProfile(userId);
     if (data == null) return null;
     return ProfileModel.fromJson(data);
   }
 
-  // Check if profile is complete with phone and KTM
+  // 3. Check profile completion
   Future<bool> isProfileComplete(String userId) async {
     final profile = await getProfile(userId);
     if (profile == null) return false;
     final phone = profile['phone']?.toString().trim() ?? '';
-    final ktmUrl = profile['ktm_image_url']?.toString().trim() ?? '';
-    final isVerified = profile['is_ktm_verified'] == true;
-    return phone.isNotEmpty && (ktmUrl.isNotEmpty || isVerified);
+    final nim = profile['nim']?.toString().trim() ?? '';
+    return phone.isNotEmpty && nim.isNotEmpty;
   }
 
-  // Find profile by NIM
+  // 4. Find profile by NIM
   Future<Map<String, dynamic>?> findProfileByNim(String nim) async {
+    try {
+      final response = await _gatewayClient.get(
+        '/api/v1/profile/search',
+        queryParams: {'nim': nim.trim()},
+      );
+      if (response is Map<String, dynamic>) return response;
+    } catch (_) {}
+
     final response = await _client
         .from('profiles')
         .select()
@@ -46,7 +67,7 @@ class ProfileService {
     return response;
   }
 
-  // Update profile details
+  // 5. Update Profile Details via PUT /api/v1/profile/me
   Future<void> updateProfile({
     required String userId,
     String? name,
@@ -60,7 +81,9 @@ class ProfileService {
     String? ewalletName,
     String? ewalletNumber,
   }) async {
-    Map<String, dynamic> data = {
+    final Map<String, dynamic> data = {
+      'user_id': userId,
+      'id': userId,
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     };
 
@@ -78,20 +101,72 @@ class ProfileService {
     if (ewalletNumber != null) data['ewallet_number'] = ewalletNumber.trim();
 
     try {
-      await _client.from('profiles').update(data).eq('id', userId);
-      debugPrint("ProfileService: Updated profile successfully for $userId");
+      await _gatewayClient.put('/api/v1/profile/me', body: data);
+      debugPrint("ProfileService: Profile updated via Golang Gateway for $userId");
+      return;
+    } catch (e) {
+      debugPrint("ProfileService.updateProfile Gateway fallback to Supabase: $e");
+    }
+
+    final dbData = Map<String, dynamic>.from(data)..remove('user_id');
+    try {
+      await _client.from('profiles').update(dbData).eq('id', userId);
+      debugPrint("ProfileService: Updated profile via Supabase for $userId");
     } catch (e) {
       debugPrint("ProfileService update error: $e. Attempting upsert fallback...");
       try {
-        data['id'] = userId;
-        await _client.from('profiles').upsert(data);
+        dbData['id'] = userId;
+        await _client.from('profiles').upsert(dbData);
       } catch (err2) {
         debugPrint("ProfileService upsert fallback error: $err2");
       }
     }
   }
 
-  // Upload and submit KTM verification
+  // 6. Sync Google Profile via POST /api/v1/auth/sync-google
+  Future<Map<String, dynamic>?> syncGoogleProfile({
+    required String id,
+    required String email,
+    String? name,
+    String? avatarUrl,
+  }) async {
+    final payload = {
+      'id': id,
+      'user_id': id,
+      'email': email.trim().toLowerCase(),
+      'name': (name != null && name.trim().isNotEmpty) ? name.trim() : 'Pengguna Mpus',
+      'avatar_url': avatarUrl?.trim() ?? '',
+    };
+
+    try {
+      final response = await _gatewayClient.post(
+        '/api/v1/auth/sync-google',
+        body: payload,
+      );
+      debugPrint("ProfileService: Synced Google profile via Gateway for $id");
+      if (response is Map<String, dynamic>) {
+        return response;
+      }
+    } catch (e) {
+      debugPrint("ProfileService.syncGoogleProfile Gateway fallback to Supabase: $e");
+    }
+
+    try {
+      final res = await _client.from('profiles').upsert({
+        'id': id,
+        'email': email.trim().toLowerCase(),
+        'name': (name != null && name.trim().isNotEmpty) ? name.trim() : 'Pengguna Mpus',
+        'avatar_url': avatarUrl?.trim() ?? '',
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }).select().maybeSingle();
+      return res;
+    } catch (err) {
+      debugPrint("ProfileService direct Supabase sync error: $err");
+      return null;
+    }
+  }
+
+  // 7. Submit KTM Verification
   Future<String> submitKtmVerification({
     required String userId,
     required File ktmFile,
@@ -101,48 +176,40 @@ class ProfileService {
   }) async {
     final ktmUrl = await _storageService.uploadKtmImage(ktmFile, userId);
 
-    Map<String, dynamic> updates = {
-      'verification_status': isAutoVerified ? 'VERIFIED' : 'PENDING_REVIEW',
-      'updated_at': DateTime.now().toUtc().toIso8601String(),
-    };
+    await updateProfile(
+      userId: userId,
+      nim: studentNim,
+      campusName: campusName,
+      verificationStatus: isAutoVerified ? 'VERIFIED' : 'PENDING_REVIEW',
+    );
 
-    if (studentNim != null && studentNim.trim().isNotEmpty) {
-      updates['nim'] = studentNim.trim();
-    }
-    if (campusName != null && campusName.trim().isNotEmpty) {
-      updates['campus_name'] = campusName.trim();
-    }
-
-    try {
-      await _client.from('profiles').update(updates).eq('id', userId);
-    } catch (e) {
-      debugPrint("submitKtmVerification update error: $e");
-    }
     return ktmUrl;
   }
 
-  // Upload and update Avatar
+  // 8. Update Avatar
   Future<String> updateAvatar(File imageFile, String userId) async {
     final avatarUrl = await _storageService.uploadAvatar(imageFile, userId);
-    await _client.from('profiles').update({
-      'avatar_url': avatarUrl,
-      'updated_at': DateTime.now().toUtc().toIso8601String(),
-    }).eq('id', userId);
+    await updateProfile(userId: userId, avatarUrl: avatarUrl);
     return avatarUrl;
   }
 
-  // Upload and update Seller QRIS
+  // 9. Update QRIS Code
   Future<String> updateQrisCode(File imageFile, String userId) async {
     final qrisUrl = await _storageService.uploadQrisCode(imageFile, userId);
-    await _client.from('profiles').update({
-      'qris_image_url': qrisUrl,
-      'updated_at': DateTime.now().toUtc().toIso8601String(),
-    }).eq('id', userId);
+    await updateProfile(userId: userId, qrisImageUrl: qrisUrl);
     return qrisUrl;
   }
 
-  // Update FCM device token for push notification
+  // 10. Update FCM Device Token
   Future<void> updateFcmToken(String userId, String fcmToken) async {
+    try {
+      await _gatewayClient.put(
+        '/api/v1/profile/fcm-token',
+        body: {'user_id': userId, 'fcm_token': fcmToken.trim()},
+      );
+      return;
+    } catch (_) {}
+
     await _client.from('profiles').update({
       'fcm_token': fcmToken.trim(),
       'updated_at': DateTime.now().toUtc().toIso8601String(),

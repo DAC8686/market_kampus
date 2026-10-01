@@ -106,12 +106,32 @@ class _LoginPageState extends State<LoginPage> {
       final user = response.user;
 
       if (user != null) {
-        // Sync FCM token
+        // 1. Sinkronisasi Profil Pengguna Google ke Golang Gateway
+        try {
+          final rawMeta = user.userMetadata ?? {};
+          final name = rawMeta['name']?.toString() ??
+              rawMeta['full_name']?.toString() ??
+              user.email?.split('@').first ??
+              'Pengguna Mpus';
+          final avatar = rawMeta['avatar_url']?.toString() ??
+              rawMeta['picture']?.toString();
+
+          await _profileService.syncGoogleProfile(
+            id: user.id,
+            email: user.email ?? '',
+            name: name,
+            avatarUrl: avatar,
+          );
+        } catch (syncErr) {
+          debugPrint("Google profile sync warning: $syncErr");
+        }
+
+        // 2. Sync FCM token
         try {
           await FirebaseNotificationService().syncTokenToProfile();
         } catch (_) {}
 
-        // Langsung masuk ke Beranda - Profil dapat dilengkapi kapan saja di menu Profil
+        // 3. Masuk ke Beranda
         _handlePostLoginNavigation();
       }
     } catch (e) {
