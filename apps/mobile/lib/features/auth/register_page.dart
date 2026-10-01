@@ -6,7 +6,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_cropper/image_cropper.dart';
 import '../../core/theme/mpus_theme.dart';
 import '../../data/services/auth_service.dart';
-import '../../data/services/profile_service.dart';
 import '../../data/services/firebase_notification_service.dart';
 import '../../data/services/ocr_api_service.dart';
 import '../catalog/home_page.dart';
@@ -33,7 +32,6 @@ class _RegisterPageState extends State<RegisterPage> {
   final _passwordController = TextEditingController();
   final _phoneController = TextEditingController();
   final AuthService _authService = AuthService();
-  final ProfileService _profileService = ProfileService();
   final OcrApiService _ocrApiService = OcrApiService();
 
   bool _isGoogleLoading = false;
@@ -225,37 +223,15 @@ class _RegisterPageState extends State<RegisterPage> {
       final user = response.user;
 
       if (user != null) {
-        final profile = await _profileService.getProfile(user.id);
-        final isRegistered = profile != null &&
-            (profile['phone']?.toString().trim().isNotEmpty == true ||
-                profile['nim']?.toString().trim().isNotEmpty == true);
-
-        if (!mounted) return;
-        if (isRegistered) {
+        try {
           await FirebaseNotificationService().syncTokenToProfile();
-          if (!mounted) return;
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const HomePage()),
-            (route) => false,
-          );
-        } else {
-          // Isi kolom email & username otomatis dari data Google
-          setState(() {
-            _emailController.text = user.email ?? '';
-            final googleName = user.userMetadata?['name']?.toString() ??
-                user.userMetadata?['full_name']?.toString() ??
-                '';
-            if (googleName.isNotEmpty) {
-              _usernameController.text = googleName;
-            }
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Akun Google terhubung! Silakan lengkapi NIM, No. WhatsApp, Password, dan upload KTM."),
-            ),
-          );
-        }
+        } catch (_) {}
+        if (!mounted) return;
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const HomePage()),
+          (route) => false,
+        );
       }
     } catch (e) {
       if (!mounted) return;

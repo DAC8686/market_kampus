@@ -150,7 +150,14 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
 
       // 2. Registrasi / Sesi Login Supabase
       String? currentUid = _authService.currentUserId ?? SupabaseConfig.currentUserId;
-      if (currentUid == null) {
+      if (currentUid != null) {
+        // User telah terautentikasi (misal via Google OAuth) -> Sinkronkan password agar bisa login manual
+        if (widget.password.isNotEmpty) {
+          try {
+            await _authService.updatePassword(widget.password);
+          } catch (_) {}
+        }
+      } else {
         try {
           final res = await _authService.signUp(
             email: widget.email,

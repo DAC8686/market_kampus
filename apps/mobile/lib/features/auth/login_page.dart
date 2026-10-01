@@ -44,7 +44,7 @@ class _LoginPageState extends State<LoginPage> {
 
     if (nimInput.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Harap isi NIM dan Password")),
+        const SnackBar(content: Text("Harap isi NIM / Email dan Password")),
       );
       return;
     }
@@ -70,15 +70,28 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       // Sync FCM token
-      await FirebaseNotificationService().syncTokenToProfile();
+      try {
+        await FirebaseNotificationService().syncTokenToProfile();
+      } catch (_) {}
 
       if (response.user != null) {
         _handlePostLoginNavigation();
       }
     } catch (e) {
       if (!mounted) return;
+      final errStr = e.toString();
+      String message = "Gagal masuk: ${errStr.replaceAll('AuthException: ', '').replaceAll('Exception: ', '')}";
+      
+      if (errStr.contains('Invalid login credentials') || errStr.contains('invalid_credentials')) {
+        message = "Kredensial tidak cocok. Jika akun Anda didaftarkan via Google, silakan masuk dengan tombol 'Masuk dengan Google' di bawah.";
+      }
+      
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Gagal masuk: ${e.toString().replaceAll('AuthException: ', '')}")),
+        SnackBar(
+          content: Text(message),
+          duration: const Duration(seconds: 4),
+          backgroundColor: Colors.redAccent,
+        ),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -93,42 +106,12 @@ class _LoginPageState extends State<LoginPage> {
       final user = response.user;
 
       if (user != null) {
-        // 🛡️ Security Guard: Cek apakah akun Google sudah terdaftar di Mpus
-        final profile = await _profileService.getProfile(user.id);
-        final phone = profile?['phone']?.toString().trim() ?? '';
-        final nim = profile?['nim']?.toString().trim() ?? '';
-        final ktmUrl = profile?['ktm_image_url']?.toString().trim() ?? '';
+        // Sync FCM token
+        try {
+          await FirebaseNotificationService().syncTokenToProfile();
+        } catch (_) {}
 
-        final isRegistered = phone.isNotEmpty || nim.isNotEmpty || ktmUrl.isNotEmpty;
-
-        if (!isRegistered) {
-          // Akun Google baru/belum lengkap -> Pertahankan sesi & arahkan ke registrasi mahasiswa
-          final googleEmail = user.email;
-          final googleName = user.userMetadata?['name']?.toString() ??
-              user.userMetadata?['full_name']?.toString();
-
-          if (!mounted) return;
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Akun Google terhubung. Silakan lengkapi identitas mahasiswa dan KTM."),
-            ),
-          );
-
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => RegisterPage(
-                initialEmail: googleEmail,
-                initialName: googleName,
-              ),
-            ),
-          );
-          return;
-        }
-
-        // Akun sudah terdaftar -> Sinkronkan token & navigasi ke Beranda
-        await FirebaseNotificationService().syncTokenToProfile();
+        // Langsung masuk ke Beranda - Profil dapat dilengkapi kapan saja di menu Profil
         _handlePostLoginNavigation();
       }
     } catch (e) {
