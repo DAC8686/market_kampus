@@ -37,15 +37,7 @@ class BackendAuthResult {
 }
 
 class BackendAuthService {
-  final List<String> candidateUrls = [
-    'https://mpus.daczdev.id',   // Cloud Production Vercel
-    'http://127.0.0.1:8090',     // Golang Gateway via USB ADB Reverse
-    'http://127.0.0.1:8000',     // Python Microservice via USB ADB Reverse
-    'http://100.64.159.25:8090', // Tailscale
-    'http://10.11.111.225:8090', // Local LAN
-    'http://10.0.2.2:8090',      // Android Emulator
-  ];
-
+  static const String baseUrl = 'https://mpus.daczdev.id';
   final http.Client _client = http.Client();
 
   // 1. Registrasi Akun Mahasiswa + AI KTM Validation + Kirim Email OTP Resmi
@@ -57,39 +49,39 @@ class BackendAuthService {
     required String phone,
     required File ktmFile,
   }) async {
-    String lastError = "Gagal menghubungi server backend Mpus.";
+    try {
+      final uri = Uri.parse('$baseUrl/api/v1/auth/register-ktm');
+      final request = http.MultipartRequest('POST', uri);
 
-    for (final host in candidateUrls) {
-      try {
-        final uri = Uri.parse('$host/api/v1/auth/register-ktm');
-        final request = http.MultipartRequest('POST', uri);
+      request.fields['name'] = name.trim();
+      request.fields['email'] = email.trim();
+      request.fields['password'] = password;
+      request.fields['nim'] = nim.trim();
+      request.fields['phone'] = phone.trim();
 
-        request.fields['name'] = name.trim();
-        request.fields['email'] = email.trim();
-        request.fields['password'] = password;
-        request.fields['nim'] = nim.trim();
-        request.fields['phone'] = phone.trim();
+      final bytes = await ktmFile.readAsBytes();
+      final filename = ktmFile.path.split('/').last;
+      request.files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
 
-        final bytes = await ktmFile.readAsBytes();
-        final filename = ktmFile.path.split('/').last;
-        request.files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
+      final streamed = await _client.send(request).timeout(const Duration(seconds: 40));
+      final response = await http.Response.fromStream(streamed);
 
-        final streamed = await _client.send(request).timeout(const Duration(seconds: 30));
-        final response = await http.Response.fromStream(streamed);
-
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          return BackendAuthResult.fromJson(data);
-        } else {
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return BackendAuthResult.fromJson(data);
+      } else {
+        try {
           final errBody = jsonDecode(response.body);
-          lastError = errBody['detail']?.toString() ?? "Pendaftaran ditolak oleh server (${response.statusCode})";
+          final errorMsg = errBody['detail']?.toString() ?? "Pendaftaran ditolak oleh server (${response.statusCode})";
+          return BackendAuthResult.failure(errorMsg);
+        } catch (_) {
+          return BackendAuthResult.failure("Pendaftaran gagal (${response.statusCode})");
         }
-      } catch (e) {
-        debugPrint("BackendAuthService register attempt to $host failed: $e");
       }
+    } catch (e) {
+      debugPrint("BackendAuthService register failed: $e");
+      return BackendAuthResult.failure("Gagal terhubung ke Cloud API Mpus ($e)");
     }
-
-    return BackendAuthResult.failure(lastError);
   }
 
   // 2. Verifikasi 6-Digit OTP yang Dikirimkan ke Email
@@ -97,59 +89,59 @@ class BackendAuthService {
     required String email,
     required String otp,
   }) async {
-    String lastError = "Kode OTP tidak dapat diverifikasi.";
+    try {
+      final uri = Uri.parse('$baseUrl/api/v1/auth/verify-otp');
+      final response = await _client.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email.trim(), 'otp': otp.trim()}),
+      ).timeout(const Duration(seconds: 20));
 
-    for (final host in candidateUrls) {
-      try {
-        final uri = Uri.parse('$host/api/v1/auth/verify-otp');
-        final response = await _client.post(
-          uri,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'email': email.trim(), 'otp': otp.trim()}),
-        ).timeout(const Duration(seconds: 15));
-
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          return BackendAuthResult.fromJson(data);
-        } else {
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return BackendAuthResult.fromJson(data);
+      } else {
+        try {
           final errBody = jsonDecode(response.body);
-          lastError = errBody['detail']?.toString() ?? "Kode OTP salah atau kadaluarsa";
+          final errorMsg = errBody['detail']?.toString() ?? "Kode OTP salah atau kadaluarsa";
+          return BackendAuthResult.failure(errorMsg);
+        } catch (_) {
+          return BackendAuthResult.failure("Verifikasi OTP gagal (${response.statusCode})");
         }
-      } catch (e) {
-        debugPrint("BackendAuthService verifyOtp attempt to $host failed: $e");
       }
+    } catch (e) {
+      debugPrint("BackendAuthService verifyOtp failed: $e");
+      return BackendAuthResult.failure("Gagal menghubungi server verifikasi ($e)");
     }
-
-    return BackendAuthResult.failure(lastError);
   }
 
   // 3. Kirim Ulang OTP ke Email
   Future<BackendAuthResult> resendOtp({
     required String email,
   }) async {
-    String lastError = "Gagal mengirim ulang kode OTP.";
+    try {
+      final uri = Uri.parse('$baseUrl/api/v1/auth/resend-otp');
+      final response = await _client.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email.trim()}),
+      ).timeout(const Duration(seconds: 20));
 
-    for (final host in candidateUrls) {
-      try {
-        final uri = Uri.parse('$host/api/v1/auth/resend-otp');
-        final response = await _client.post(
-          uri,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'email': email.trim()}),
-        ).timeout(const Duration(seconds: 15));
-
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          return BackendAuthResult.fromJson(data);
-        } else {
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return BackendAuthResult.fromJson(data);
+      } else {
+        try {
           final errBody = jsonDecode(response.body);
-          lastError = errBody['detail']?.toString() ?? "Gagal mengirim ulang OTP";
+          final errorMsg = errBody['detail']?.toString() ?? "Gagal mengirim ulang OTP";
+          return BackendAuthResult.failure(errorMsg);
+        } catch (_) {
+          return BackendAuthResult.failure("Gagal mengirim ulang OTP (${response.statusCode})");
         }
-      } catch (e) {
-        debugPrint("BackendAuthService resendOtp attempt to $host failed: $e");
       }
+    } catch (e) {
+      debugPrint("BackendAuthService resendOtp failed: $e");
+      return BackendAuthResult.failure("Gagal menghubungi server untuk kirim ulang OTP ($e)");
     }
-
-    return BackendAuthResult.failure(lastError);
   }
 }

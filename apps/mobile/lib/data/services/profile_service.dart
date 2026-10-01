@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/supabase_config.dart';
 import '../models/profile_model.dart';
@@ -78,7 +79,21 @@ class ProfileService {
     try {
       await _client.from('profiles').upsert(data);
     } catch (_) {
-      await _client.from('profiles').update(data).eq('id', userId);
+      try {
+        await _client.from('profiles').update(data).eq('id', userId);
+      } catch (_) {
+        // Fallback resilient update
+        data.remove('is_ktm_verified');
+        try {
+          await _client.from('profiles').upsert(data);
+        } catch (_) {
+          try {
+            await _client.from('profiles').update(data).eq('id', userId);
+          } catch (finalErr) {
+            debugPrint("ProfileService update error: $finalErr");
+          }
+        }
+      }
     }
   }
 

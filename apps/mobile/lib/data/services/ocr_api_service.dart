@@ -85,78 +85,73 @@ class OcrApiService {
       : baseUrl = baseUrl ?? AppConstants.ocrServiceBaseUrl,
         _httpClient = client ?? http.Client();
 
-  // Verify KTM by uploading an image file directly to the Python OCR Microservice
+  // Verify KTM by uploading an image file directly to Cloud API (Gemini 2.5 Flash Vision)
   Future<KTMVerificationResult> verifyKtmImage({
     required File imageFile,
     String? expectedNim,
     String? expectedName,
     String? expectedCampus,
   }) async {
-    // List candidate URLs: Production Vercel cloud domain first, followed by fallbacks
-    final candidateUrls = <String>{
-      'https://mpus.daczdev.id', // Production Vercel Serverless
-      baseUrl,
-      'http://100.64.159.25:8000', // Tailscale Dev Host
-      'http://10.11.111.225:8000', // Local LAN Dev Host
-      'http://10.0.2.2:8000',
-      'http://127.0.0.1:8000',
-    }.toList();
+    try {
+      final uri = Uri.parse('$baseUrl/api/v1/verify-upload');
+      final request = http.MultipartRequest('POST', uri);
 
-    for (final host in candidateUrls) {
-      try {
-        final uri = Uri.parse('$host/api/v1/verify-upload');
-        final request = http.MultipartRequest('POST', uri);
+      final bytes = await imageFile.readAsBytes();
+      final filename = imageFile.path.split('/').last;
 
-        final bytes = await imageFile.readAsBytes();
-        final filename = imageFile.path.split('/').last;
+      request.files.add(
+        http.MultipartFile.fromBytes('file', bytes, filename: filename),
+      );
 
-        request.files.add(
-          http.MultipartFile.fromBytes('file', bytes, filename: filename),
-        );
-
-        if (expectedNim != null && expectedNim.isNotEmpty) {
-          request.fields['expected_nim'] = expectedNim;
-        }
-        if (expectedName != null && expectedName.isNotEmpty) {
-          request.fields['expected_name'] = expectedName;
-        }
-        if (expectedCampus != null && expectedCampus.isNotEmpty) {
-          request.fields['expected_campus'] = expectedCampus;
-        }
-
-        final streamedResponse = await _httpClient.send(request).timeout(
-          const Duration(seconds: 25),
-        );
-
-        final response = await http.Response.fromStream(streamedResponse);
-
-        if (response.statusCode == 200) {
-          final Map<String, dynamic> data = jsonDecode(response.body);
-          return KTMVerificationResult.fromJson(data);
-        }
-      } catch (e) {
-        debugPrint('OcrApiService attempt to $host failed: $e');
-        // Continue to next candidate URL
+      if (expectedNim != null && expectedNim.isNotEmpty) {
+        request.fields['expected_nim'] = expectedNim;
       }
-    }
+      if (expectedName != null && expectedName.isNotEmpty) {
+        request.fields['expected_name'] = expectedName;
+      }
+      if (expectedCampus != null && expectedCampus.isNotEmpty) {
+        request.fields['expected_campus'] = expectedCampus;
+      }
 
-    // Graceful fallback if OCR service is offline or unreachable
-    return KTMVerificationResult(
-      success: false,
-      status: 'PENDING_REVIEW',
-      errorMessage: 'Microservice OCR tidak dapat dijangkau. KTM akan ditinjau secara manual.',
-    );
+      final streamedResponse = await _httpClient.send(request).timeout(
+        const Duration(seconds: 40),
+      );
+
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        return KTMVerificationResult.fromJson(data);
+      } else {
+        try {
+          final errData = jsonDecode(response.body);
+          return KTMVerificationResult(
+            success: false,
+            status: 'REJECTED',
+            errorMessage: errData['detail']?.toString() ?? 'Verifikasi ditolak oleh server',
+          );
+        } catch (_) {
+          return KTMVerificationResult.failure('Gagal memverifikasi KTM (${response.statusCode})');
+        }
+      }
+    } catch (e) {
+      debugPrint('OcrApiService Cloud attempt failed: $e');
+      return KTMVerificationResult(
+        success: false,
+        status: 'PENDING_REVIEW',
+        errorMessage: 'Gagal terhubung ke Cloud OCR ($e). KTM akan ditinjau secara manual.',
+      );
+    }
   }
 
-  // Check health of OCR service
+  // Check health of OCR service directly on cloud
   Future<bool> checkHealth() async {
-    for (final host in [baseUrl, 'https://mpus.daczdev.id', 'http://10.0.2.2:8000', 'http://127.0.0.1:8000']) {
-      try {
-        final uri = Uri.parse('$host/health');
-        final response = await _httpClient.get(uri).timeout(const Duration(seconds: 3));
-        if (response.statusCode == 200) return true;
-      } catch (_) {}
+    try {
+      final uri = Uri.parse('$baseUrl/health');
+      final response = await _httpClient.get(uri).timeout(const Duration(seconds: 5));
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
     }
-    return false;
   }
 }
