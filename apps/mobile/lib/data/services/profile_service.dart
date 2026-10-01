@@ -54,14 +54,13 @@ class ProfileService {
     String? phone,
     String? nim,
     String? campusName,
-    bool? isKtmVerified,
     String? verificationStatus,
-    String? ktmImageUrl,
+    String? avatarUrl,
+    String? qrisImageUrl,
     String? ewalletName,
     String? ewalletNumber,
   }) async {
     Map<String, dynamic> data = {
-      'id': userId,
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     };
 
@@ -70,26 +69,24 @@ class ProfileService {
     if (phone != null && phone.trim().isNotEmpty) data['phone'] = phone.trim();
     if (nim != null && nim.trim().isNotEmpty) data['nim'] = nim.trim();
     if (campusName != null && campusName.trim().isNotEmpty) data['campus_name'] = campusName.trim();
-    if (isKtmVerified != null) data['is_ktm_verified'] = isKtmVerified;
-    if (verificationStatus != null) data['verification_status'] = verificationStatus.trim();
-    if (ktmImageUrl != null && ktmImageUrl.trim().isNotEmpty) data['ktm_image_url'] = ktmImageUrl.trim();
+    if (verificationStatus != null && verificationStatus.trim().isNotEmpty) {
+      data['verification_status'] = verificationStatus.trim();
+    }
+    if (avatarUrl != null && avatarUrl.trim().isNotEmpty) data['avatar_url'] = avatarUrl.trim();
+    if (qrisImageUrl != null && qrisImageUrl.trim().isNotEmpty) data['qris_image_url'] = qrisImageUrl.trim();
     if (ewalletName != null) data['ewallet_name'] = ewalletName.trim();
     if (ewalletNumber != null) data['ewallet_number'] = ewalletNumber.trim();
 
     try {
-      await _client.from('profiles').upsert(data);
-      debugPrint("ProfileService: Upserted profile successfully for $userId");
+      await _client.from('profiles').update(data).eq('id', userId);
+      debugPrint("ProfileService: Updated profile successfully for $userId");
     } catch (e) {
-      debugPrint("ProfileService upsert error: $e. Trying update by id...");
+      debugPrint("ProfileService update error: $e. Attempting upsert fallback...");
       try {
-        await _client.from('profiles').update(data).eq('id', userId);
+        data['id'] = userId;
+        await _client.from('profiles').upsert(data);
       } catch (err2) {
-        debugPrint("ProfileService update by id error: $err2");
-        if (email != null && email.isNotEmpty) {
-          try {
-            await _client.from('profiles').update(data).eq('email', email.trim().toLowerCase());
-          } catch (_) {}
-        }
+        debugPrint("ProfileService upsert fallback error: $err2");
       }
     }
   }
@@ -105,8 +102,6 @@ class ProfileService {
     final ktmUrl = await _storageService.uploadKtmImage(ktmFile, userId);
 
     Map<String, dynamic> updates = {
-      'ktm_image_url': ktmUrl,
-      'is_ktm_verified': isAutoVerified,
       'verification_status': isAutoVerified ? 'VERIFIED' : 'PENDING_REVIEW',
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     };
@@ -118,7 +113,11 @@ class ProfileService {
       updates['campus_name'] = campusName.trim();
     }
 
-    await _client.from('profiles').update(updates).eq('id', userId);
+    try {
+      await _client.from('profiles').update(updates).eq('id', userId);
+    } catch (e) {
+      debugPrint("submitKtmVerification update error: $e");
+    }
     return ktmUrl;
   }
 

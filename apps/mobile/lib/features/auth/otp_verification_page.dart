@@ -178,10 +178,9 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
 
       currentUid ??= _authService.currentUserId ?? SupabaseConfig.currentUserId;
       if (currentUid != null) {
-        String? ktmUrl;
         if (widget.ktmFile != null) {
           try {
-            ktmUrl = await _profileService.submitKtmVerification(
+            await _profileService.submitKtmVerification(
               userId: currentUid,
               ktmFile: widget.ktmFile!,
               studentNim: widget.nim,
@@ -201,8 +200,6 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
           phone: widget.phone,
           nim: widget.nim,
           campusName: widget.campusName,
-          ktmImageUrl: ktmUrl,
-          isKtmVerified: true,
           verificationStatus: 'VERIFIED',
         );
       }

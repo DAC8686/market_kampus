@@ -11,7 +11,6 @@ import '../../data/services/profile_service.dart';
 import '../../data/services/product_service.dart';
 import '../../data/services/order_service.dart';
 import '../auth/login_page.dart';
-import '../auth/change_phone_page.dart';
 import '../auth/change_password_page.dart';
 import '../catalog/product_form_page.dart';
 import '../catalog/product_detail_page.dart';
@@ -300,7 +299,8 @@ class _ProfilePageState extends State<ProfilePage> {
         SupabaseConfig.currentUser?.userMetadata?['full_name']?.toString() ??
         '';
     final initialNim = _userProfile?['nim']?.toString() ?? '';
-    final initialCampus = _userProfile?['campus_name']?.toString() ?? '';
+    final rawCampus = _userProfile?['campus_name']?.toString() ?? '';
+    final initialCampus = (rawCampus.isEmpty || rawCampus == 'Kampus') ? '' : rawCampus;
     final initialPhone = _userProfile?['phone']?.toString() ?? '';
 
     final nameCtrl = TextEditingController(text: initialName);
@@ -321,7 +321,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   const Icon(Icons.badge_outlined, color: MpusTheme.tealDark),
                   const SizedBox(width: 8),
                   Text(
-                    'Identitas Mahasiswa',
+                    'Identitas & Kontak Mahasiswa',
                     style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ],
@@ -342,9 +342,10 @@ class _ProfilePageState extends State<ProfilePage> {
                     const SizedBox(height: 12),
                     TextField(
                       controller: nimCtrl,
-                      keyboardType: TextInputType.number,
+                      keyboardType: TextInputType.text,
                       decoration: InputDecoration(
                         labelText: 'Nomor Induk Mahasiswa (NIM)',
+                        hintText: 'Contoh: 241101066',
                         prefixIcon: const Icon(Icons.credit_card_outlined),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -355,6 +356,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       controller: campusCtrl,
                       decoration: InputDecoration(
                         labelText: 'Nama Kampus / Universitas',
+                        hintText: 'Contoh: Universitas Nahdlatul Ulama Sunan Giri',
                         prefixIcon: const Icon(Icons.school_outlined),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -366,6 +368,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       keyboardType: TextInputType.phone,
                       decoration: InputDecoration(
                         labelText: 'No. WhatsApp Aktif',
+                        hintText: 'Contoh: 085749237528',
                         prefixIcon: const Icon(Icons.phone_outlined),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -396,7 +399,6 @@ class _ProfilePageState extends State<ProfilePage> {
                               nim: nimCtrl.text.trim(),
                               campusName: campusCtrl.text.trim(),
                               phone: phoneCtrl.text.trim(),
-                              isKtmVerified: true,
                               verificationStatus: 'VERIFIED',
                             );
                             await _loadProfile();
@@ -404,7 +406,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             if (mounted) {
                               messenger.showSnackBar(
                                 const SnackBar(
-                                  content: Text('Profil mahasiswa berhasil disimpan!'),
+                                  content: Text('Identitas mahasiswa berhasil disimpan!'),
                                   backgroundColor: Colors.green,
                                 ),
                               );
@@ -486,7 +488,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       ListTile(
                         leading: const Icon(Icons.badge_outlined, color: MpusTheme.tealDark, size: 20),
                         title: Text(
-                          'Data Mahasiswa & KTM',
+                          'Data Mahasiswa & Kontak',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 13,
                             color: MpusTheme.textDarkColor,
@@ -510,22 +512,6 @@ class _ProfilePageState extends State<ProfilePage> {
                         onTap: () {
                           Navigator.pop(context);
                           _showQrisSettingsDialog();
-                        },
-                      ),
-                      const Divider(height: 1, color: Color(0xFFE5E5E5)),
-                      ListTile(
-                        leading: const Icon(Icons.phone_outlined, color: MpusTheme.tealDark, size: 20),
-                        title: Text(
-                          'Ganti No. WhatsApp',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13,
-                            color: MpusTheme.textDarkColor,
-                          ),
-                        ),
-                        onTap: () async {
-                          Navigator.pop(context);
-                          await Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangePhonePage()));
-                          _loadProfile();
                         },
                       ),
                       const Divider(height: 1, color: Color(0xFFE5E5E5)),
