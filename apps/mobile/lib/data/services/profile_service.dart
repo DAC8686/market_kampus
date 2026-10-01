@@ -35,10 +35,21 @@ class ProfileService {
     return phone.isNotEmpty && (ktmUrl.isNotEmpty || isVerified);
   }
 
+  // Find profile by NIM
+  Future<Map<String, dynamic>?> findProfileByNim(String nim) async {
+    final response = await _client
+        .from('profiles')
+        .select()
+        .eq('nim', nim.trim())
+        .maybeSingle();
+    return response;
+  }
+
   // Update profile details
   Future<void> updateProfile({
     required String userId,
     String? name,
+    String? email,
     String? phone,
     String? nim,
     String? campusName,
@@ -50,6 +61,7 @@ class ProfileService {
     };
 
     if (name != null) updates['name'] = name.trim();
+    if (email != null) updates['email'] = email.trim();
     if (phone != null) updates['phone'] = phone.trim();
     if (nim != null) updates['nim'] = nim.trim();
     if (campusName != null) updates['campus_name'] = campusName.trim();

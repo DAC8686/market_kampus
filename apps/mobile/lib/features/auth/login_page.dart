@@ -50,12 +50,12 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _signIn() async {
-    final nimOrEmail = _nimController.text.trim();
+    final nimInput = _nimController.text.trim();
     final password = _passwordController.text.trim();
 
-    if (nimOrEmail.isEmpty || password.isEmpty) {
+    if (nimInput.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Harap isi NIM / Email dan Password")),
+        const SnackBar(content: Text("Harap isi NIM dan Password")),
       );
       return;
     }
@@ -63,7 +63,18 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isLoading = true);
 
     try {
-      final email = nimOrEmail.contains('@') ? nimOrEmail : "$nimOrEmail@mpus.com";
+      String email = nimInput.contains('@') ? nimInput : "$nimInput@mpus.com";
+
+      if (!nimInput.contains('@')) {
+        try {
+          final profile = await _profileService.findProfileByNim(nimInput);
+          final registeredEmail = profile?['email']?.toString().trim();
+          if (registeredEmail != null && registeredEmail.isNotEmpty) {
+            email = registeredEmail;
+          }
+        } catch (_) {}
+      }
+
       final response = await _authService.signIn(
         email: email,
         password: password,
@@ -205,7 +216,7 @@ class _LoginPageState extends State<LoginPage> {
                             height: 38 * scaleW,
                             child: TextField(
                               controller: _nimController,
-                              keyboardType: TextInputType.emailAddress,
+                              keyboardType: TextInputType.number,
                               style: TextStyle(
                                 color: MpusTheme.textPrimaryColor,
                                 fontSize: 14 * scaleW,
@@ -214,7 +225,7 @@ class _LoginPageState extends State<LoginPage> {
                               textAlignVertical: TextAlignVertical.center,
                               decoration: InputDecoration(
                                 isDense: true,
-                                labelText: 'Email / NIM',
+                                labelText: 'NIM',
                                 floatingLabelBehavior: FloatingLabelBehavior.auto,
                                 floatingLabelStyle: TextStyle(
                                   color: const Color(0xFF8F8F8F),

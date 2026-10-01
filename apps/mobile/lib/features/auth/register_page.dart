@@ -188,6 +188,7 @@ class _RegisterPageState extends State<RegisterPage> {
           await _profileService.updateProfile(
             userId: currentUid,
             name: name,
+            email: emailInput,
             phone: cleanPhone,
             nim: nim,
             campusName: "Kampus",
